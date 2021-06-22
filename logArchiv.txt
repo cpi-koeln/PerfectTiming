@@ -1,0 +1,4 @@
+logIn;21.06.2021;13:04:33;Projekt1
+logOut;21.06.2021;13:04:34;Projekt1
+logIn;21.06.2021;13:19:50;Projekt1
+logOut;21.06.2021;13:19:55;Projekt1
