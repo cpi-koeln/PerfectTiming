@@ -1,6 +1,5 @@
-
-
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 def close(fenster):
     fenster.destroy()
     #menu.attributes("-topmost",0)
@@ -11,14 +10,56 @@ def close(fenster):
     except:
             print("close():Menüfenster ist schon zu")
 
-
-def timer(labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime):
+def closeAlarm(alarmWindow,labelActiveAlarm):
     import time
+    alarmWindow.destroy()
+
+    #pT.attributes("-topmost",1)
+
+
+
+def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime):
+    import time
+    import os
+    import tkinter as tk
+    import beepy as beep
+
     zeit=time.strftime("%H:%M",time.localtime())
     if(zeit=="00:00"):
             labelWorkTime.config(text="0h 0min")
     labelTime.config(text=zeit)
-    labelTime.after(60000,lambda:timer(labelWorkTime, labelTaskTime, logButton,breakButton,taskMenu,labelTime)) # müsste auf 60000 gesetzt werden
+    #aktivenAlarm runterzählen
+    textActiveAlarm=labelActiveAlarm["text"]
+    textActiveAlarmArr=textActiveAlarm.split(" ")
+    timerNextAlarm=textActiveAlarmArr[1]
+    timerNextAlarm=int(timerNextAlarm.replace("min",""))
+
+
+    if timerNextAlarm>1:
+        text=labelActiveAlarm["text"]
+        text=text.replace(str(timerNextAlarm),str(timerNextAlarm-1))
+        labelActiveAlarm["text"]=text
+        timerNextAlarm=timerNextAlarm-1
+    else:
+        alarmWindow=tk.Tk()
+        alarmWindow.attributes("-topmost",1)
+        alarmWindow.geometry("+%d+%d"%(500,500))
+        alarmWindow.configure(bg="gray")
+        alarmLabel=tk.Label(alarmWindow,text=nextAlarmName,font=("times",16))
+        alarmLabel.grid(row=0, column=0)
+        OkButton=tk.Button(alarmWindow,text="Ok",command=lambda:closeAlarm(alarmWindow,labelActiveAlarm))
+        OkButton.grid(row=2, column=0)
+        beep.beep(4)
+        nextAlarmArr=getNextAlarm()
+        nextAlarm=nextAlarmArr[0]
+        nextAlarmName=nextAlarmArr[1]
+        curSeconds=time.mktime(time.localtime())
+        nextAlarmSeconds=time.mktime(nextAlarm)
+        timerNextAlarm=int((nextAlarmSeconds-curSeconds)/60)+1 #+1 weil direkt im Anschluss Timer ausgeführt wird, wo die variabele um 1 reduziert wird
+        labelActiveAlarm["text"]="Noch "+str(timerNextAlarm)+"min bis "+nextAlarmName
+
+
+    labelTime.after(60000,lambda:timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime, logButton,breakButton,taskMenu,labelTime)) # müsste auf 60000 gesetzt werden
     state=logButton["text"]
     if(state=="Ausloggen"):
         workTimerString=labelWorkTime["text"]
@@ -49,6 +90,25 @@ def timer(labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime)
             breakButton["text"]="Kurzpause"
             log(logButton,taskMenu,labelTime,labelWorkTime, labelTaskTime,breakButton)
 
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:8]=="alarmTime"):
+            zeileArr=zeile.split(";")
+            separator=";"
+            zeileNeu=separator.join(zeileArr)
+        elif (zeile[0:8]=="alarmName"):
+            zeileArr=zeile.split(";")
+            separator=";"
+            zeileNeu=separator.join(zeileArr)
+        else:
+            zeileNeu=zeile
+        configNeu=configNeu+zeileNeu
+    config.close()
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
 
 
 
@@ -83,6 +143,7 @@ def log(logButton,taskMenu,labelTime,labelWorkTime, labelTaskTime,breakButton):
         #labelWorkTime.config(text="0h 0min")
         #labelTaskTime.config(text="0h 0min")
     log.close()
+    logArchiv.close()
 
 def shortBreak(breakButton, logButton,taskMenu,labelTime):
     import tkinter as tk
@@ -101,6 +162,7 @@ def shortBreak(breakButton, logButton,taskMenu,labelTime):
         logButton["text"]="Einloggen"
         log.write("logOut;"+logDate+";"+logTime+";"+task+"\n")
         labelTime.config(fg="black")
+        log.close()
 
 def changeTask(passarg, *args):
     import tkinter as tk
@@ -129,6 +191,7 @@ def changeTask(passarg, *args):
         log.write("logOut;"+logDate+";"+logTime+";"+"oldTask"+"\n")
         log.write("logIn;"+logDate+";"+logTime+";"+task+"\n")
         labelTaskTime["text"]="0h 00min"
+        log.close()
 
 
 def test():
@@ -145,7 +208,6 @@ def deleteProjekt(listProjekte):
     import os
     active=listProjekte.get(listProjekte.curselection())
     cur_path = os.path.dirname(__file__)
-    print(cur_path)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
     for zeile in config:
@@ -154,12 +216,16 @@ def deleteProjekt(listProjekte):
             zeileArr.remove(active)
             separator=";"
             zeileNeu=separator.join(zeileArr)
+            zeileNeu=zeileNeu.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
         else:
             zeileNeu=zeile
         configNeu=configNeu+zeileNeu
+
     config.close()
     config=open(cur_path+"\config.txt","w")
     config.write(configNeu)
+    config.close()
     listProjekte.delete(0,"end")
     countProjekte=len(zeileArr)
     i=1
@@ -167,7 +233,7 @@ def deleteProjekt(listProjekte):
         listProjekte.insert(i,zeileArr[i])
         i=i+1
 
-def changedProjekt(listProjekte,active,newProjektName,changeName):
+def changedProjekt(listProjekte,active,newProjektName,changeWecker):
     import os
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
@@ -179,39 +245,42 @@ def changedProjekt(listProjekte,active,newProjektName,changeName):
             zeileArr[index]=newProjektName.get()
             separator=";"
             zeileNeu=separator.join(zeileArr)
+            zeileNeu=zeileNeu.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
         else:
             zeileNeu=zeile
         configNeu=configNeu+zeileNeu
     config.close()
     config=open(cur_path+"\config.txt","w")
     config.write(configNeu)
+    config.close()
     listProjekte.delete(0,"end")
     countProjekte=len(zeileArr)
     i=1
     while i<countProjekte:
         listProjekte.insert(i,zeileArr[i])
         i=i+1
-    changeName.destroy()
+    changeWecker.destroy()
 
 
 def changeProjekt(listProjekte):
     import tkinter as tk
     active=listProjekte.get(listProjekte.curselection())
 
-    changeName=tk.Tk()
-    changeName.title("Neuer Projektname")
-    changeName.geometry("+%d+%d"%(75,250))
-    changeName.geometry("250x75")
-    changeName.attributes("-topmost",1)
+    changeWecker=tk.Tk()
+    changeWecker.title("Neuer Projektname")
+    changeWecker.geometry("+%d+%d"%(75,250))
+    changeWecker.geometry("250x75")
+    changeWecker.attributes("-topmost",1)
 
-    label1=tk.Label(changeName,text="Bitte gebe den neuen Projektnamen an:",font=("times",10))
+    label1=tk.Label(changeWecker,text="Bitte gebe den neuen Projektnamen an:",font=("times",10))
     label1.grid(row=0,column=0,columnspan=2, sticky="W")
 
-    input=tk.Entry(changeName)
+    input=tk.Entry(changeWecker)
     input.insert(10,"")
     input.grid(row=1,column=0, sticky="W")
 
-    buttonOK2=tk.Button(changeName,text="OK",height=1,width=10, command=lambda:changedProjekt(listProjekte,active,input,changeName))
+    buttonOK2=tk.Button(changeWecker,text="OK",height=1,width=10, command=lambda:changedProjekt(listProjekte,active,input,changeWecker))
     buttonOK2.grid(row=1,column=1, sticky="W")
 
 def addProjekt(listProjekte,inputNeu):
@@ -220,14 +289,15 @@ def addProjekt(listProjekte,inputNeu):
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
+    zeileArr=[]
     for zeile in config:
         if (zeile[0:8]=="projekte"):
             zeileArr=zeile.split(";")
             zeileArr.append(newName)
-            print(zeileArr)
             separator=";"
             zeileNeu=separator.join(zeileArr)
             zeileNeu=zeileNeu.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
 
         else:
             zeileNeu=zeile
@@ -235,6 +305,7 @@ def addProjekt(listProjekte,inputNeu):
     config.close()
     config=open(cur_path+"\config.txt","w")
     config.write(configNeu)
+    config.close()
     listProjekte.delete(0,"end")
     countProjekte=len(zeileArr)
     i=1
@@ -290,6 +361,7 @@ def projekte():
                 listProjekte.insert(i,zeileArr[i])
                 i=i+1
     listProjekte.grid(row=2, rowspan=6, column=0, sticky="W")
+    config.close()
 
 def stempeln():
     import tkinter as tk
@@ -332,6 +404,7 @@ def stempeln():
         if (zeile[0:8]=="projekte"):
             tasks=zeile.split(";")
             taskList=tasks[1:len(tasks)]
+    config.close()
 
 
     #taskList=["Aufgabe wählen","Task1","Task2","Task3"]
@@ -368,21 +441,22 @@ def addStempel(stempelFenster,dateLogIn,dateLogOut,timeLogIn,timeLogOut,taskLogI
         logDate=str(dateLogIn.get_date())
         logTime=str(timeLogIn.get())+":00"
         task=taskLogIn["text"]
-        log.write("logIn;"+logDate+";"+logTime+";"+task+"\n")
+        log.write("logIn;"+logDate+";"+logTime+";"+task)
 
     if(timeLogOut.get()!="hh:mm"):
         logDate=str(dateLogOut.get_date())
         logTime=str(timeLogOut.get())+":00"
         task=taskLogOut["text"]
-        log.write("logOut;"+logDate+";"+logTime+";"+task+"\n")
+        log.write("logOut;"+logDate+";"+logTime+";"+task)
     stempelFenster.destroy()
+    log.close()
 
 
 
 
 def auswertung(menu):
     import os
-
+    import time
     import openpyxl
 
     path = os.path.dirname(__file__)+"\Auswertung.xlsm"
@@ -396,7 +470,7 @@ def auswertung(menu):
     menu.destroy()
     os.startfile(path)
     log=os.path.dirname(__file__)+"\log.txt"
-    sleep(60)
+    time.sleep(60)
     open(log, 'w').close()
 
 
@@ -420,12 +494,398 @@ def menuClick(pT):
         projektButton.grid(row=1,column=0)
         stempelButton=tk.Button(menu,text="Stempeln",width=12,height=1,command=lambda:stempeln())
         stempelButton.grid(row=2,column=0)
-        weckerButton=tk.Button(menu,text="Wecker",state=tk.DISABLED,width=12,height=1,command=lambda:test())
+        weckerButton=tk.Button(menu,text="Wecker",width=12,height=1,command=lambda:weckerMenu())
         weckerButton.grid(row=3,column=0)
         einstellungButton=tk.Button(menu,text="Einstellungen",state=tk.DISABLED,width=12,height=1,command=lambda:test())
         einstellungButton.grid(row=4,column=0)
         auswertungButton=tk.Button(menu,text="Auswertung",width=12,height=1,command=lambda:auswertung(menu))
         auswertungButton.grid(row=5,column=0)
+
+def changedWecker(tableWecker,changeWecker,inputName,serie,datum,inputZeitraum,timeMenu,inputZeit):
+    import os
+    import time as tm
+    alarmName=inputName.get()
+    alarmDatum=datum.get_date()
+
+    alarmDatum=tm.strptime(str(alarmDatum),"%Y-%m-%d")
+    alarmDatum=tm.strftime("%d.%m.%Y",alarmDatum)
+
+    alarmZeitraum=inputZeitraum.get()
+    einheitZeitraum=timeMenu["text"]
+    alarmZeit=inputZeit.get()
+    if (alarmZeitraum!="xxx"):
+        if (einheitZeitraum=="Minute(n)"):
+            faktor=1
+        elif (einheitZeitraum=="Stunde(n)"):
+            faktor=60
+        elif (einheitZeitraum=="Tag(e)"):
+            faktor=60*24
+        elif (einheitZeitraum=="Woche(n)"):
+            faktor=60*24*7
+        else:
+            faktor=0
+        serie=faktor*int(alarmZeitraum)
+    else:
+        serie=0
+
+    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie)]
+    separator=","
+    newAlarmString=separator.join(newAlarm)
+
+
+    active=tableWecker.get(tableWecker.curselection())
+    separator=","
+    active=separator.join(active)
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            wecker=zeile.split(";")
+            index=wecker.index(active)
+            wecker[index]=newAlarmString
+            separator=";"
+            zeileNeu=separator.join(wecker)
+            zeileNeu=zeileNeu.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+        else:
+            zeileNeu=zeile.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+        configNeu=configNeu+zeileNeu
+    config.close()
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
+    tableWecker.delete(0,"end")
+    countWecker=len(wecker)
+    i=1
+    while i<countWecker:
+        tableWecker.insert(i,wecker[i].split(","))
+        i=i+1
+    changeWecker.destroy()
+
+
+
+def changeWecker(tableWecker):
+    import tkinter as tk
+    import os
+    from tkinter import ttk
+    import tkcalendar
+    from tkcalendar import Calendar, DateEntry
+
+    try:
+        active=tableWecker.get(tableWecker.curselection())
+
+    except:
+        print("nichts ausgewählt!")
+        active=""
+
+    if (active!=""):
+        ## Hier muss noch von Projekt auf Wecker geändert werden
+        changeWecker=tk.Tk()
+        changeWecker.title("Wecker bearbeiten")
+        changeWecker.geometry("+%d+%d"%(75,250))
+        changeWecker.geometry("250x150")
+        changeWecker.attributes("-topmost",1)
+
+        labelName=tk.Label(changeWecker,text="Name:",font=("times",10))
+        labelName.grid(row=2,column=1,rowspan=3,columnspan=10, sticky="W")
+
+        labelSerie=tk.Label(changeWecker,text="Serientermin?:",font=("times",10))
+        labelSerie.grid(row=6,column=0,rowspan=3,columnspan=15, sticky="W")
+
+        labelDatum=tk.Label(changeWecker,text="Datum",font=("times",10))
+        labelDatum.grid(row=10,column=0,rowspan=3,columnspan=9, sticky="W")
+
+        labelWiederholung=tk.Label(changeWecker,text="Wiederholung: alle",font=("times",10))
+
+        labelUhrzeit=tk.Label(changeWecker,text="Uhrzeit",font=("times",10))
+        labelUhrzeit.grid(row=18,column=0,rowspan=3,columnspan=14, sticky="W")
+
+        inputName=tk.Entry(changeWecker)
+        inputName.insert(0,active[2])
+        inputName.grid(row=2,column=16,rowspan=3,columnspan=19, sticky="W")
+
+
+        serie=tk.IntVar()
+
+        radioJa=tk.Radiobutton(changeWecker,text="ja",variable=serie, value=1,command=lambda:changeToSerie(changeWecker, labelDatum,labelWiederholung,inputZeitraum,timeMenu))
+        radioJa.grid(row=6,column=18,rowspan=3,columnspan=8, sticky="W")
+        radioNein=tk.Radiobutton(changeWecker,text="nein",variable=serie, value=2,command=lambda:changeFromSerie(changeWecker, labelDatum,labelWiederholung,inputZeitraum,timeMenu))
+        radioNein.grid(row=6,column=27,rowspan=3,columnspan=10, sticky="W")
+
+        datum = DateEntry(changeWecker,date_pattern="dd.MM.yyyy", width=10,bg="darkblue",fg="white",year=2021)
+        datum.set_date(active[0])
+        datum.grid(row=10,column=16,rowspan=3,columnspan=18,)
+
+        inputZeitraum=tk.Entry(changeWecker)
+        inputZeitraum.configure(width=3)
+
+
+        timeList=["Minute(n)","Stunde(n)","Tag(e)","Woche(n)"]
+        times=tk.StringVar(changeWecker)
+        times.set(timeList[0])
+        timeMenu=tk.OptionMenu(changeWecker,times, *timeList)
+        #passarg=[logButton,labelTime,breakButton,labelTaskTime,task,taskMenu]
+        #passed=""
+        #times.trace("w",lambda *args, passed=passarg:changeTask(passed,*args)) # Ruft die Funktion changeTask auf, wenn die varieable Task geändert wird (w=wirte)
+        timeMenu.configure(height=1);
+        timeMenu.configure(width=10);
+        timeMenu.configure(anchor="w")
+
+        inputZeit=tk.Entry(changeWecker)
+        inputZeit.insert(0,active[1])
+        inputZeit.grid(row=18,column=16,rowspan=3,columnspan=18,sticky="W")
+
+        if(int(active[3])>0):
+            inputZeitraum.insert(0,active[3])
+            radioJa.select()
+            labelWiederholung.grid(row=14,column=0,rowspan=3,columnspan=19, sticky="W")
+            inputZeitraum.grid(row=14,column=21,rowspan=3,columnspan=4,sticky="W")
+            timeMenu.grid(row=14,column=26 ,rowspan=3,columnspan=14,sticky="NW")
+        else:
+            inputZeitraum.insert(10,"xxx")
+            radioNein.select()
+
+
+        buttonSpeichern=tk.Button(changeWecker,text="Wecker speichern",width=15,height=1, command=lambda:changedWecker(tableWecker,changeWecker,inputName,serie,datum,inputZeitraum,timeMenu,inputZeit))
+        buttonSpeichern.grid(row=22,column=16,rowspan=3,columnspan=18,sticky="W")
+        #changeWecker.mainloop()
+
+
+
+
+
+def saveWecker(tableWecker,newWecker,inputName,serie,datum,inputZeitraum,timeMenu,inputZeit):
+    import tkinter as tk
+    import os
+    import time as tm
+
+    alarmName=inputName.get()
+    alarmDatum=datum.get_date()
+
+    alarmDatum=tm.strptime(str(alarmDatum),"%Y-%m-%d")
+    alarmDatum=tm.strftime("%d.%m.%Y",alarmDatum)
+
+    alarmZeitraum=inputZeitraum.get()
+    einheitZeitraum=timeMenu["text"]
+    alarmZeit=inputZeit.get()
+    if (alarmZeitraum!="xxx"):
+        if (einheitZeitraum=="Minute(n)"):
+            faktor=1
+        elif (einheitZeitraum=="Stunde(n)"):
+            faktor=60
+        elif (einheitZeitraum=="Tag(e)"):
+            faktor=60*24
+        elif (einheitZeitraum=="Woche(n)"):
+            faktor=60*24*7
+        else:
+            faktor=0
+        serie=faktor*int(alarmZeitraum)
+    else:
+        serie=0
+
+    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie)]
+    separator=","
+    newAlarmString=separator.join(newAlarm)
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            zeile=zeile.replace("\n","")
+            wecker=zeile.split(";")
+            wecker.append(newAlarmString)
+            separator=";"
+            zeileNeu=separator.join(wecker)+"\n"
+        else:
+            zeileNeu=zeile.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+
+        configNeu=configNeu+zeileNeu
+    config.close()
+
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
+    tableWecker.delete(0,"end")
+    countWecker=len(wecker)
+    i=1
+    while i<countWecker:
+        tableWecker.insert(i,wecker[i].split(","))
+        i=i+1
+    newWecker.destroy()
+
+def changeToSerie(newWecker, labelDatum,labelWiederholung,inputZeitraum,timeMenu):
+    import tkinter as tk
+    labelDatum.configure(text="Startdatum")
+    labelWiederholung.grid(row=14,column=0,rowspan=3,columnspan=19, sticky="W")
+    inputZeitraum.grid(row=14,column=21,rowspan=3,columnspan=4,sticky="W")
+    timeMenu.grid(row=14,column=26 ,rowspan=3,columnspan=14,sticky="NW")
+    inputZeitraum.delete(0,tk.END)
+
+def changeFromSerie(newWecker, labelDatum,labelWiederholung,inputZeitraum,timeMenu):
+    import tkinter as tk
+    labelDatum.configure(text="Datum")
+    labelWiederholung.grid_forget()
+    inputZeitraum.grid_forget()
+    timeMenu.grid_forget()
+    inputZeitraum.delete(0,tk.END)
+    inputZeitraum.insert(10,"xxx")
+
+
+def addWecker(tableWecker):
+    import tkinter as tk
+    import os
+    from tkinter import ttk
+    import tkcalendar
+    from tkcalendar import Calendar, DateEntry
+
+    newWecker=tk.Tk()
+    newWecker.title("Neuen Wecker hinzufügen")
+    newWecker.geometry("+%d+%d"%(75,250))
+    newWecker.geometry("250x150")
+    newWecker.attributes("-topmost",1)
+
+    labelName=tk.Label(newWecker,text="Name:",font=("times",10))
+    labelName.grid(row=2,column=1,rowspan=3,columnspan=10, sticky="W")
+
+    labelSerie=tk.Label(newWecker,text="Serientermin?:",font=("times",10))
+    labelSerie.grid(row=6,column=0,rowspan=3,columnspan=15, sticky="W")
+
+    labelDatum=tk.Label(newWecker,text="Datum",font=("times",10))
+    labelDatum.grid(row=10,column=0,rowspan=3,columnspan=9, sticky="W")
+
+    labelWiederholung=tk.Label(newWecker,text="Wiederholung: alle",font=("times",10))
+
+    labelUhrzeit=tk.Label(newWecker,text="Uhrzeit",font=("times",10))
+    labelUhrzeit.grid(row=18,column=0,rowspan=3,columnspan=14, sticky="W")
+
+    inputName=tk.Entry(newWecker)
+    inputName.grid(row=2,column=16,rowspan=3,columnspan=19, sticky="W")
+
+
+    serie=tk.IntVar()
+
+    radioJa=tk.Radiobutton(newWecker,text="ja",variable=serie, value=1,command=lambda:changeToSerie(newWecker, labelDatum,labelWiederholung,inputZeitraum,timeMenu))
+    radioJa.grid(row=6,column=18,rowspan=3,columnspan=8, sticky="W")
+    radioNein=tk.Radiobutton(newWecker,text="nein",variable=serie, value=2,command=lambda:changeFromSerie(newWecker, labelDatum,labelWiederholung,inputZeitraum,timeMenu))
+    radioNein.grid(row=6,column=27,rowspan=3,columnspan=10, sticky="W")
+    radioNein.select()
+
+
+    datum = DateEntry(newWecker,date_pattern="dd.MM.yyyy", width=10,bg="darkblue",fg="white",year=2021)
+    datum.grid(row=10,column=16,rowspan=3,columnspan=18,)
+
+    inputZeitraum=tk.Entry(newWecker)
+    inputZeitraum.configure(width=3)
+    inputZeitraum.insert(10,"xxx")
+
+    timeList=["Minute(n)","Stunde(n)","Tag(e)","Woche(n)"]
+    times=tk.StringVar(newWecker)
+    times.set(timeList[0])
+    timeMenu=tk.OptionMenu(newWecker,times, *timeList)
+    #passarg=[logButton,labelTime,breakButton,labelTaskTime,task,taskMenu]
+    #passed=""
+    #times.trace("w",lambda *args, passed=passarg:changeTask(passed,*args)) # Ruft die Funktion changeTask auf, wenn die varieable Task geändert wird (w=wirte)
+    timeMenu.configure(height=1);
+    timeMenu.configure(width=10);
+    timeMenu.configure(anchor="w")
+
+    inputZeit=tk.Entry(newWecker)
+    inputZeit.insert(10,"hh:mm")
+    inputZeit.grid(row=18,column=16,rowspan=3,columnspan=18,sticky="W")
+
+
+    buttonSpeichern=tk.Button(newWecker,text="Wecker speichern",width=15,height=1, command=lambda:saveWecker(tableWecker,newWecker,inputName,serie,datum,inputZeitraum,timeMenu,inputZeit))
+    buttonSpeichern.grid(row=22,column=16,rowspan=3,columnspan=18,sticky="W")
+    #newWecker.mainloop()
+
+def deleteWecker(tableWecker):
+    import os
+    active=tableWecker.get(tableWecker.curselection())
+    separator=","
+    active=separator.join(active)
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            zeileArr=zeile.split(";")
+            zeileArr.remove(active)
+            separator=";"
+            zeileNeu=separator.join(zeileArr)
+            zeileNeu=zeileNeu.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+        else:
+            zeileNeu=zeile
+        configNeu=configNeu+zeileNeu
+
+    config.close()
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
+    tableWecker.delete(0,"end")
+    countWecker=len(zeileArr)
+    i=1
+    while i<countWecker:
+        tableWecker.insert(i,zeileArr[i].split(","))
+        i=i+1
+
+def weckerMenu():
+    import tkinter as tk
+    from tkinter import ttk
+    import os
+    from MultiListbox import MultiListbox
+
+    menu.destroy()
+
+    weckerFenster=tk.Tk()
+    weckerFenster.title("Weckermenü")
+    weckerFenster.geometry("+%d+%d"%(100,100))
+    weckerFenster.geometry("500x250")
+    weckerFenster.attributes("-topmost",1)
+
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            wecker=zeile.split(";")
+            countAlarm=len(wecker)
+            i=1
+
+
+    label1=tk.Label(weckerFenster,text="vorhandene Wecker:",font=("times",10))
+    label1.grid(row=0,column=0, sticky="W")
+
+    buttonBearbeiten=tk.Button(weckerFenster,text="Ändern",width=10,height=1, command=lambda:changeWecker(tableWecker))
+    buttonBearbeiten.grid(row=2,column=2, sticky="W")
+
+    buttonLoeschen=tk.Button(weckerFenster,text="Löschen",width=10,height=1,command=lambda:deleteWecker(tableWecker))
+    buttonLoeschen.grid(row=3,column=2, sticky="W")
+
+    separator=ttk.Separator(weckerFenster, orient="horizontal")
+    separator.grid(row=4,column=2, sticky="W")
+
+    buttonHinzufuegen=tk.Button(weckerFenster,text="Neuen Wecker hinzufügen",width=20,height=1,command=lambda:addWecker(tableWecker))
+    buttonHinzufuegen.grid(row=5,column=2, columnspan=2, sticky="W")
+
+    buttonOK=tk.Button(weckerFenster,text="OK",width=10,height=1,command=lambda:close(weckerFenster))
+    buttonOK.grid(row=7,column=2, sticky="W")
+
+    tableWecker=MultiListbox(weckerFenster,(("Wecker",10),("Nächstes Datum",10),("Nächste Uhrzeit",10),("Serie",10)))
+    tableWecker.grid(row=2, rowspan=6, column=0, sticky="W")
+    while i<countAlarm:
+        columns=wecker[i].split(",")
+        ergebnis=ZeitraumBerechnen(columns[3])
+        serie=str(ergebnis[0])+" "+str(ergebnis[1])
+        tableWecker.insert(tk.END, (columns[0] , columns[1],columns[2],serie))
+        i=i+1
+
+    config.close()
+
+
+
 
 def hideWindow(pT,hideButton):
     if (hideButton["text"]=="Hide"):
@@ -434,3 +894,117 @@ def hideWindow(pT,hideButton):
     else:
         pT.attributes("-topmost",1)
         hideButton.config(text="Hide")
+
+def newAlarm(labelActiveAlarm,addAlarmButton,inputTimeNextAlarm,labelNextAlarm,inputNextAlarm,alarmButton):
+    alarmButton.grid_forget()
+    #labelActiveAlarm.grid_forget()
+    inputTimeNextAlarm.grid(row=13,rowspan=5, column=0,columnspan=2 ,sticky="NW")
+    labelNextAlarm.grid(row=13,rowspan=5,column=2, columnspan=3,sticky="NW")
+    inputNextAlarm.grid(row=13,rowspan=5, column=6, columnspan=10, sticky="NW")
+    addAlarmButton.grid(row=13, rowspan=5,column=26,columnspan=3,sticky="NW")
+
+def ZeitraumBerechnen(Minuten):
+    if (int(Minuten)!=0):
+        if(int(Minuten)%(7*24*60)==0):
+            einheit="Wochen(n)"
+            zeit=int(Minuten)/(7*24*60)
+        elif(int(Minuten)%(24*60)==0):
+            einheit="Tag(e)"
+            zeit=int(Minuten)/(24*60)
+        elif(int(Minuten)%(60)==0):
+            einheit="Stunde(n)"
+            zeit=int(Minuten)/60
+        else:
+            einheit="Minute(n)"
+            zeit=int(Minuten)
+        ergebnis=[int(zeit),einheit]
+    else:
+        ergebnis=[0,""]
+    return ergebnis
+
+def addAlarm(addAlarmButton,labelNextAlarm,alarmButton,inputTimeNextAlarm,inputNextAlarm,labelActiveAlarm):
+    import time
+    import os
+    curSeconds=time.mktime(time.localtime())
+    alarmSeconds=curSeconds+60*int(inputTimeNextAlarm.get())
+    nextAlarm=time.localtime(alarmSeconds)
+    dateAlarm=time.strftime("%d.%m.%Y",nextAlarm)
+    timeAlarm=time.strftime("%H:%M",nextAlarm)
+    nameAlarm=inputNextAlarm.get()
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            zeile=zeile.replace("\n","")
+            zeileNeu=zeile+";"+dateAlarm+","+timeAlarm+","+nameAlarm+","+"0\n"
+        else:
+            zeileNeu=zeile
+        configNeu=configNeu+zeileNeu
+    config.close()
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
+    nextAlarmArr=getNextAlarm()
+    nextAlarm=nextAlarmArr[0]
+    nextAlarmName=nextAlarmArr[1]
+    curSeconds=time.mktime(time.localtime())
+    nextAlarmSeconds=time.mktime(nextAlarm)
+    timerNextAlarm=int((nextAlarmSeconds-curSeconds)/60)+1 #+1 weil direkt im Anschluss Timer ausgeführt wird, wo die variabele um 1 reduziert wird
+    labelActiveAlarm["text"]="Noch "+str(timerNextAlarm)+"min bis "+nextAlarmName
+    alarmButton.grid(row=13,rowspan=4,column=0,  columnspan=23,sticky="NW")
+    inputTimeNextAlarm.grid_forget()
+    labelNextAlarm.grid_forget()
+    inputNextAlarm.grid_forget()
+    addAlarmButton.grid_forget()
+
+def getNextAlarm():
+    #!/usr/bin/env python
+    # -*- coding: utf-8 -*-
+    import os
+    import time as tm
+
+    curDateTime=tm.strftime("%d.%m.%Y %H:%M",tm.localtime())
+    curDateTime=tm.strptime(curDateTime,"%d.%m.%Y %H:%M")
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    change=0
+    nextAlarm=""
+    nextAlarmName=""
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            alarms=zeile.split(";")
+            i=1
+            date=[]
+            time=[]
+            name=[]
+            nextAlarm=tm.strptime("01.01.2200 09:00","%d.%m.%Y %H:%M")
+            while i<len(alarms):
+                alarm=alarms[i].split(",")
+                date.append(alarm[0])
+                time.append(alarm[1])
+                name.append(alarm[2])
+                alarmDateTime=tm.strptime(alarm[0]+" "+alarm[1],"%d.%m.%Y %H:%M")
+
+                if alarmDateTime<curDateTime:
+                    alarms.pop(i)
+                    change=1
+                elif alarmDateTime<nextAlarm:
+                    nextAlarm=alarmDateTime
+                    nextAlarmName=str(alarm[2])
+                i=i+1
+            separator=";"
+            zeileNeu=separator.join(alarms)+"\n"
+
+        else:
+            zeileNeu=zeile
+        configNeu=configNeu+zeileNeu
+
+    config.close()
+    if change==1:
+        config=open(cur_path+"\config.txt","w")
+        config.write(configNeu)
+        config.close()
+    nextAlarmArr=[nextAlarm,nextAlarmName]
+    return nextAlarmArr
