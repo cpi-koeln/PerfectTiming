@@ -1,3 +1,4 @@
-alarm;27.06.2021,21:00,test2,0;28.06.2021,14:00,test6,120
+alarm;28.06.2021,14:00,test6,120
+erinnerung;erinnerung1,,60,ja,ja;erinnerung2,,10,nein,ja;erinnerung3,,20,nein,nein;erinnerung4,,30,ja,ja
 Balarm;27.06.2021,20:00,test1,0;27.06.2021,21:00,test2,0;27.06.2021,19:00,test4,60
 projekte;projekt1

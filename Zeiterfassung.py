@@ -26,6 +26,7 @@ inputTimeNextAlarm=tk.Entry(pT,width=3)
 labelNextAlarm=tk.Label(pT,text="min bis ", bg="gray", font=("times",10))
 inputNextAlarm=tk.Entry(pT)
 
+addErinnerungen()
 nextAlarmArr=getNextAlarm()
 
 nextAlarm=nextAlarmArr[0]
