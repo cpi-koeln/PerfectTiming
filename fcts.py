@@ -18,29 +18,31 @@ def closeAlarm(alarmWindow,labelActiveAlarm):
 
 
 
-def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime):
+def timer(erinnerungen,nextAlarmArr,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime):
     import time
     import os
     import tkinter as tk
     import beepy as beep
 
+    deleteAlarms()
+    alarmAusgeloest=0
+    nextAlarmName=nextAlarmArr[1]
+    nextAlarmSec=nextAlarmArr[0]
     zeit=time.strftime("%H:%M",time.localtime())
     if(zeit=="00:00"):
             labelWorkTime.config(text="0h 0min")
     labelTime.config(text=zeit)
+
     #aktivenAlarm runterzählen
-    textActiveAlarm=labelActiveAlarm["text"]
-    textActiveAlarmArr=textActiveAlarm.split(" ")
-    timerNextAlarm=textActiveAlarmArr[1]
-    timerNextAlarm=int(timerNextAlarm.replace("min",""))
+    curDateTime=time.strftime("%d.%m.%Y %H:%M",time.localtime())
+    curDateTime=time.strptime(curDateTime,"%d.%m.%Y %H:%M")
+    curDateTimeSec=time.mktime(curDateTime)
+    zeitdiff0=int((nextAlarmSec-curDateTimeSec)/60)
+    if (zeitdiff0>=1):
 
-
-    if timerNextAlarm>1:
-        text=labelActiveAlarm["text"]
-        text=text.replace(str(timerNextAlarm),str(timerNextAlarm-1))
+        text="noch "+ str(zeitdiff0)+" min bis "+str(nextAlarmName)
         labelActiveAlarm["text"]=text
-        timerNextAlarm=timerNextAlarm-1
-    else:
+    elif(zeitdiff0<-15):
         alarmWindow=tk.Tk()
         alarmWindow.attributes("-topmost",1)
         alarmWindow.geometry("+%d+%d"%(500,500))
@@ -50,16 +52,80 @@ def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, label
         OkButton=tk.Button(alarmWindow,text="Ok",command=lambda:closeAlarm(alarmWindow,labelActiveAlarm))
         OkButton.grid(row=2, column=0)
         beep.beep(4)
+        alarmAusgeloest=1
+
+
+
+    # Erinnerungen aktualisieren
+    newWecker=[]
+
+    for erinnerung in erinnerungen:
+        if (erinnerung[3]=="ja"):
+            if (erinnerung[5]=="neu"):
+                erinnerung[5]=curDateTimeSec+int(erinnerung[2])*60
+            if (erinnerung[4]=="ja"):
+                zeitdiff1=int((int(erinnerung[5])-curDateTimeSec)/60)
+                if (zeitdiff1<1 and zeitdiff1>-2):
+                    cur_path = os.path.dirname(__file__)
+                    config=open(cur_path+"\config.txt","r")
+                    configNeu=""
+                    for zeile in config:
+                        zeile=zeile.replace("\n","")
+                        if(zeile[0:5]=="alarm"):
+                            alarms=zeile
+                        else:
+                            configNeu=configNeu+zeile+"\n"
+                    config.close()
+
+                    newDateTimeSec=curDateTimeSec+int(erinnerung[2])*60
+                    newDateTime=time.localtime(newDateTimeSec)
+                    newDate=time.strftime("%d.%m.%Y",newDateTime)
+                    newTime=time.strftime("%H:%M",newDateTime)
+                    wecker=[str(newDate),str(newTime),erinnerung[0],"0"]
+                    separator=","
+                    newWecker.append(separator.join(wecker))
+            else:
+                zeitdiff2=int((int(erinnerung[5])-curDateTimeSec)/60)
+                #print(zeitdiff2)
+                if (zeitdiff2<1 and zeitdiff2>-2):
+                    erinnerung[5]=curDateTimeSec+int(erinnerung[2])*60
+                    erinnerungWindow=tk.Tk()
+                    erinnerungWindow.attributes("-topmost",1)
+                    erinnerungWindow.geometry("+%d+%d"%(500,500))
+                    erinnerungWindow.configure(bg="gray")
+                    erinnerungLabel=tk.Label(erinnerungWindow,text=str(erinnerung[0]),font=("times",16))
+                    erinnerungLabel.grid(row=0, column=0)
+                    OkButtonE=tk.Button(erinnerungWindow,text="Ok",command=lambda:close(erinnerungWindow))
+                    OkButtonE.grid(row=2, column=0)
+                    beep.beep(4)
+
+    if len(newWecker)>0:
+        #print(newWecker)
+        separator=";"
+        newErinnerungenString=separator.join(newWecker)
+        alarmsNeu=alarms+";"+newErinnerungenString
+        alarmsNeu=alarmsNeu+"\n"
+        configNeu=configNeu+alarmsNeu
+        config=open(cur_path+"\config.txt","w")
+        config.write(configNeu)
+        config.close()
+
+
+
+    if (alarmAusgeloest==1):
+        deleteAlarms()
         nextAlarmArr=getNextAlarm()
         nextAlarm=nextAlarmArr[0]
+
         nextAlarmName=nextAlarmArr[1]
-        curSeconds=time.mktime(time.localtime())
-        nextAlarmSeconds=time.mktime(nextAlarm)
-        timerNextAlarm=int((nextAlarmSeconds-curSeconds)/60)+1 #+1 weil direkt im Anschluss Timer ausgeführt wird, wo die variabele um 1 reduziert wird
-        labelActiveAlarm["text"]="Noch "+str(timerNextAlarm)+"min bis "+nextAlarmName
+
+        timerText=int((nextAlarm-curDateTimeSec)/60)
+
+        text="noch "+ str(timerText)+" min bis "+str(nextAlarmName)
+        labelActiveAlarm["text"]=text
 
 
-    labelTime.after(60000,lambda:timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime, logButton,breakButton,taskMenu,labelTime)) # müsste auf 60000 gesetzt werden
+    labelTime.after(60000,lambda:timer(erinnerungen,nextAlarmArr,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime)) # müsste auf 60000 gesetzt werden
     state=logButton["text"]
     if(state=="Ausloggen"):
         workTimerString=labelWorkTime["text"]
@@ -90,6 +156,7 @@ def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, label
             breakButton["text"]="Kurzpause"
             log(logButton,taskMenu,labelTime,labelWorkTime, labelTaskTime,breakButton)
 
+"""
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
@@ -109,7 +176,7 @@ def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, label
     config=open(cur_path+"\config.txt","w")
     config.write(configNeu)
     config.close()
-
+"""
 
 
 
@@ -441,13 +508,13 @@ def addStempel(stempelFenster,dateLogIn,dateLogOut,timeLogIn,timeLogOut,taskLogI
         logDate=str(dateLogIn.get_date())
         logTime=str(timeLogIn.get())+":00"
         task=taskLogIn["text"]
-        log.write("logIn;"+logDate+";"+logTime+";"+task)
+        log.write("logIn;"+logDate+";"+logTime+";"+task+"\n")
 
     if(timeLogOut.get()!="hh:mm"):
         logDate=str(dateLogOut.get_date())
         logTime=str(timeLogOut.get())+":00"
         task=taskLogOut["text"]
-        log.write("logOut;"+logDate+";"+logTime+";"+task)
+        log.write("logOut;"+logDate+";"+logTime+";"+task+"\n")
     stempelFenster.destroy()
     log.close()
 
@@ -501,6 +568,76 @@ def menuClick(pT):
         auswertungButton=tk.Button(menu,text="Auswertung",width=12,height=1,command=lambda:auswertung(menu))
         auswertungButton.grid(row=5,column=0)
 
+
+
+
+
+
+def addErinnerungentoWecker(): # Startet zu Beginndes Programms und schiebt aktive Erinnerungen mit Countdownfunktion in Weckerliste
+    import os
+    import time as tm
+
+    curDateTime=tm.strftime("%d.%m.%Y %H:%M",tm.localtime())
+    curDateTime=tm.strptime(curDateTime,"%d.%m.%Y %H:%M")
+
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    newWecker=[]
+    newErinnerungen=[]
+    for zeile in config:
+        zeile=zeile.replace("\n","")
+        if (zeile[0:10]=="erinnerung"):
+            erinnerungen=zeile.split(";")
+            countErinnerungen=len(erinnerungen)
+            i=1
+            while i<countErinnerungen:
+                erinnerung=erinnerungen[i].split(",")
+                if (erinnerung[3]=="ja"):
+                    if (erinnerung[4]=="ja"):
+                        newDateTimeSec=tm.mktime(curDateTime)
+                        newDateTimeSec=newDateTimeSec+int(erinnerung[2])*60
+                        newDateTime=tm.localtime(newDateTimeSec)
+                        newDate=tm.strftime("%d.%m.%Y",newDateTime)
+                        newTime=tm.strftime("%H:%M",newDateTime)
+                        wecker=[str(newDate),str(newTime),erinnerung[0],"0","erinnerung"] # letzter Eintrag um zu zeigen, dass es nach dem Shcließen bzw zum Neustart gelöscht werden kann.
+                        separator=","
+                        newWecker.append(separator.join(wecker))
+                    erinnerung.append("neu")# zum Runterzählen in Timer wird die Dauer nochmal abgespeichert
+                    newErinnerungen.append(erinnerung)
+                i=i+1
+            configNeu=configNeu+zeile+"\n"
+        elif(zeile[0:5]=="alarm"):
+            alarms=zeile.split(";")
+            countAlarms=len(alarms)
+            i=1
+            newAlarms=[]
+            while i<countAlarms:
+                alarm=alarms[i].split(",")
+                if (alarm[4]!="erinnerung"):
+                    newAlarms.append(alarms[i])
+                i=i+1
+            separator=";"
+            alarms=separator.join(newAlarms)
+        else:
+            configNeu=configNeu+zeile+"\n"
+    config.close()
+    separator=";"
+    newErinnerungenString=separator.join(newWecker)
+    if (alarms!=""):
+        alarms=alarms+";"
+    if(newErinnerungenString!=""):
+        alarmsNeu="alarm;"+alarms+newErinnerungenString
+        alarmsNeu=alarmsNeu+"\n"
+        configNeu=configNeu+alarmsNeu
+        config=open(cur_path+"\config.txt","w")
+        config.write(configNeu)
+        config.close()
+    return newErinnerungen
+
+########--------Funktionen zuer Weckerbearbeitung------------------
+
+
 def changedWecker(tableWecker,changeWecker,inputName,serie,datum,inputZeitraum,timeMenu,inputZeit):
     import os
     import time as tm
@@ -528,7 +665,7 @@ def changedWecker(tableWecker,changeWecker,inputName,serie,datum,inputZeitraum,t
     else:
         serie=0
 
-    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie)]
+    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie),"wecker"]
     separator=","
     newAlarmString=separator.join(newAlarm)
 
@@ -542,7 +679,8 @@ def changedWecker(tableWecker,changeWecker,inputName,serie,datum,inputZeitraum,t
     for zeile in config:
         if (zeile[0:5]=="alarm"):
             wecker=zeile.split(";")
-            index=wecker.index(active)
+            print("active")
+            index=wecker.index(active+",wecker")
             wecker[index]=newAlarmString
             separator=";"
             zeileNeu=separator.join(wecker)
@@ -685,7 +823,7 @@ def saveWecker(tableWecker,newWecker,inputName,serie,datum,inputZeitraum,timeMen
     else:
         serie=0
 
-    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie)]
+    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie),"wecker"]
     separator=","
     newAlarmString=separator.join(newAlarm)
     cur_path = os.path.dirname(__file__)
@@ -804,8 +942,23 @@ def addWecker(tableWecker):
 def deleteWecker(tableWecker):
     import os
     active=tableWecker.get(tableWecker.curselection())
+    if (active[3]!="0"):
+        serie=active[3].split(" ")
+        zeit=int(serie[0])
+        einheit=serie[1].replace(" ","")
+        if (einheit=="Minute(n)"):
+            faktor=1
+        elif(einheit=="Stunde(n)"):
+            faktor=60
+        elif(einheit=="Tag(e)"):
+            faktor=60*24
+        elif(einheit=="Woche(n)"):
+            faktor=60*24*7
+        minuten=zeit*faktor
+        active[3]=str(minuten)
+
     separator=","
-    active=separator.join(active)
+    active=separator.join(active)+",wecker"
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
@@ -832,6 +985,284 @@ def deleteWecker(tableWecker):
         tableWecker.insert(i,zeileArr[i].split(","))
         i=i+1
 
+
+
+#########---------- Funktionen zuer Erinnerungsbearbeitung--------##############
+def changedErinnerung(active,tableErinnerung,changeErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar):
+    import os
+    import time as tm
+    erinnerungName=inputName.get()
+    erinnerungSymbol=inputSymbol.get()
+    erinnerungErinnerung=inputErinnerung.get()
+
+    if (checkAktivVar.get()==1):
+        checkAktiv="ja"
+    else:
+        checkAktiv="nein"
+
+    if(checkCountdownVar.get()==1):
+        checkCountdown="ja"
+    else:
+        checkCountdown="nein"
+
+    newErinnerungArr=[str(erinnerungName),str(erinnerungSymbol),str(erinnerungErinnerung),str(checkAktiv),str(checkCountdown)]
+    separator=","
+    newErinnerungString=separator.join(newErinnerungArr)
+    separator=","
+    active=separator.join(active)
+
+    #active=tableErinnerung.curselection()
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:10]=="erinnerung"):
+            erinnerung=zeile.split(";")
+            index=erinnerung.index(active)
+            erinnerung[index]=newErinnerungString
+            separator=";"
+            zeileNeu=separator.join(erinnerung)
+            zeileNeu=zeileNeu.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+        else:
+            zeileNeu=zeile.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+        configNeu=configNeu+zeileNeu
+    config.close()
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
+    tableErinnerung.delete(0,"end")
+    countErinnerung=len(erinnerung)
+    i=1
+    while i<countErinnerung:
+        tableErinnerung.insert(i,erinnerung[i].split(","))
+        i=i+1
+    changeErinnerung.destroy()
+
+
+
+def changeErinnerung(tableErinnerung):
+    import tkinter as tk
+    import os
+    from tkinter import ttk
+    import tkcalendar
+    from tkcalendar import Calendar, DateEntry
+
+    try:
+        active=tableErinnerung.get(tableErinnerung.curselection())
+
+    except:
+        print("nichts ausgewählt!")
+        active=""
+
+    if (active!=""):
+        ## Hier muss noch von Projekt auf Wecker geändert werden
+        changeErinnerung=tk.Tk()
+        changeErinnerung.title("Neuen Erinnerung hinzufügen")
+        changeErinnerung.geometry("+%d+%d"%(75,250))
+        changeErinnerung.geometry("250x150")
+        changeErinnerung.attributes("-topmost",1)
+
+
+
+        labelName=tk.Label(changeErinnerung,text="Name:",font=("times",10))
+        labelName.grid(row=0,column=1,rowspan=1,columnspan=10, sticky="W")
+
+        labelSymbol=tk.Label(changeErinnerung,text="Symbol:",font=("times",10))
+        labelSymbol.grid(row=1,column=1,rowspan=1,columnspan=10, sticky="W")
+
+        labelWiederholung1=tk.Label(changeErinnerung,text="Wiederholung nach:",font=("times",10))
+        labelWiederholung1.grid(row=2,column=1,rowspan=1,columnspan=10, sticky="W")
+        labelWiederholung2=tk.Label(changeErinnerung,text="Minuten",font=("times",10))
+        labelWiederholung2.grid(row=2,column=19,rowspan=1,columnspan=10, sticky="W")
+
+        labelaktiv=tk.Label(changeErinnerung,text="aktiv?",font=("times",10))
+        labelaktiv.grid(row=3,column=1,rowspan=1,columnspan=10, sticky="W")
+
+        labelCountdown=tk.Label(changeErinnerung,text="Countdown?",font=("times",10))
+        labelCountdown.grid(row=4,column=1,rowspan=1,columnspan=10, sticky="W")
+
+        inputName=tk.Entry(changeErinnerung)
+        inputName.grid(row=0,column=10,rowspan=1,columnspan=20, sticky="W")
+        inputName.insert(0,active[0])
+
+        inputSymbol=tk.Entry(changeErinnerung)
+        inputSymbol.grid(row=1,column=10,rowspan=1,columnspan=2, sticky="W")
+        inputSymbol.configure(width=3)
+        inputSymbol.insert(0,active[1])
+
+        inputErinnerung=tk.Entry(changeErinnerung)
+        inputErinnerung.grid(row=2,column=15,rowspan=1,columnspan=5, sticky="W")
+        inputErinnerung.configure(width=3)
+        inputErinnerung.insert(0,active[2])
+
+        checkAktivVar=tk.IntVar(changeErinnerung)
+
+        checkAktiv=tk.Checkbutton(changeErinnerung,variable = checkAktivVar, onvalue = 1, offvalue = 0)
+        checkAktiv.grid(row=3,column=10,rowspan=1,columnspan=1, sticky="W")
+        if(active[3]=="ja"):
+            checkAktivVar.set(1)
+            #checkAktiv.select()
+        else:
+            checkAktivVar.set(0)
+
+        checkCountdownVar=tk.IntVar(changeErinnerung)
+        checkCountdown=tk.Checkbutton(changeErinnerung,variable = checkCountdownVar, onvalue = 1, offvalue = 0)
+        checkCountdown.grid(row=4,column=10,rowspan=1,columnspan=1, sticky="W")
+        if(active[4]=="ja"):
+            checkCountdownVar.set(1)
+            #checkAktiv.select()
+        else:
+            checkCountdownVar.set(0)
+
+
+        buttonSpeichern=tk.Button(changeErinnerung,text="Erinnerung speichern",width=15,height=1, command=lambda:changedErinnerung(active,tableErinnerung,changeErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar))
+        buttonSpeichern.grid(row=5,column=16,rowspan=3,columnspan=18,sticky="W")
+        #changeErinnerung.mainloop()
+
+
+
+
+
+
+def saveErinnerung(tableErinnerung,newErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar):
+    import tkinter as tk
+    import os
+    import time as tm
+
+    erinnerungName=inputName.get()
+    erinnerungSymbol=inputSymbol.get()
+    erinnerungErinnerung=inputErinnerung.get()
+    if (checkAktivVar.get()==1):
+        checkAktiv="ja"
+    else:
+        checkAktiv="nein"
+
+    if(checkCountdownVar.get()==1):
+        checkCountdown="ja"
+    else:
+        checkCountdown="nein"
+
+    newErinnerungArr=[str(erinnerungName),str(erinnerungSymbol),str(erinnerungErinnerung),str(checkAktiv),str(checkCountdown)]
+    separator=","
+    newErinnerungString=separator.join(newErinnerungArr)
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:10]=="erinnerung"):
+            zeile=zeile.replace("\n","")
+            erinnerung=zeile.split(";")
+            erinnerung.append(newErinnerungString)
+            separator=";"
+            zeileNeu=separator.join(erinnerung)+"\n"
+        else:
+            zeileNeu=zeile.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+
+        configNeu=configNeu+zeileNeu
+    config.close()
+
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
+    tableErinnerung.delete(0,"end")
+    countErinnerung=len(erinnerung)
+    i=1
+    while i<countErinnerung:
+        tableErinnerung.insert(i,erinnerung[i].split(","))
+        i=i+1
+    newErinnerung.destroy()
+
+
+def addErinnerung(tableErinnerung):
+    import tkinter as tk
+    import os
+    from tkinter import ttk
+    import tkcalendar
+    from tkcalendar import Calendar, DateEntry
+
+    newErinnerung=tk.Tk()
+    newErinnerung.title("Neuen Erinnerung hinzufügen")
+    newErinnerung.geometry("+%d+%d"%(75,250))
+    newErinnerung.geometry("250x150")
+    newErinnerung.attributes("-topmost",1)
+
+    labelName=tk.Label(newErinnerung,text="Name:",font=("times",10))
+    labelName.grid(row=0,column=1,rowspan=1,columnspan=10, sticky="W")
+
+    labelSymbol=tk.Label(newErinnerung,text="Symbol:",font=("times",10))
+    labelSymbol.grid(row=1,column=1,rowspan=1,columnspan=10, sticky="W")
+
+    labelWiederholung1=tk.Label(newErinnerung,text="Wiederholung nach:",font=("times",10))
+    labelWiederholung1.grid(row=2,column=1,rowspan=1,columnspan=10, sticky="W")
+    labelWiederholung2=tk.Label(newErinnerung,text="Minuten",font=("times",10))
+    labelWiederholung2.grid(row=2,column=19,rowspan=1,columnspan=10, sticky="W")
+
+    labelaktiv=tk.Label(newErinnerung,text="aktiv?",font=("times",10))
+    labelaktiv.grid(row=3,column=1,rowspan=1,columnspan=10, sticky="W")
+
+    labelCountdown=tk.Label(newErinnerung,text="Countdown?",font=("times",10))
+    labelCountdown.grid(row=4,column=1,rowspan=1,columnspan=10, sticky="W")
+
+    inputName=tk.Entry(newErinnerung)
+    inputName.grid(row=0,column=10,rowspan=1,columnspan=20, sticky="W")
+
+    inputSymbol=tk.Entry(newErinnerung)
+    inputSymbol.grid(row=1,column=10,rowspan=1,columnspan=2, sticky="W")
+    inputSymbol.configure(width=3)
+
+    inputErinnerung=tk.Entry(newErinnerung)
+    inputErinnerung.grid(row=2,column=15,rowspan=1,columnspan=5, sticky="W")
+    inputErinnerung.configure(width=3)
+
+    checkAktivVar=tk.IntVar(newErinnerung)
+
+    checkAktiv=tk.Checkbutton(newErinnerung,variable = checkAktivVar, onvalue = 1, offvalue = 0)
+    checkAktiv.grid(row=3,column=10,rowspan=1,columnspan=1, sticky="W")
+    checkAktivVar.set(1)
+    checkAktiv.select()
+    checkCountdownVar=tk.IntVar(newErinnerung)
+    checkCountdown=tk.Checkbutton(newErinnerung,variable = checkCountdownVar, onvalue = 1, offvalue = 0)
+    checkCountdown.grid(row=4,column=10,rowspan=1,columnspan=1, sticky="W")
+
+    buttonSpeichern=tk.Button(newErinnerung,text="Erinnerung speichern",width=15,height=1, command=lambda:saveErinnerung(tableErinnerung,newErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar))
+    buttonSpeichern.grid(row=5,column=16,rowspan=3,columnspan=18,sticky="W")
+    #newErinnerung.mainloop()
+
+def deleteErinnerung(tableErinnerung):
+    import os
+    active=tableErinnerung.get(tableErinnerung.curselection())
+    separator=","
+    active=separator.join(active)
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    for zeile in config:
+        if (zeile[0:10]=="erinnerung"):
+            zeileArr=zeile.split(";")
+            zeileArr.remove(active)
+            separator=";"
+            zeileNeu=separator.join(zeileArr)
+            zeileNeu=zeileNeu.replace("\n","")
+            zeileNeu=zeileNeu+"\n"
+        else:
+            zeileNeu=zeile
+        configNeu=configNeu+zeileNeu
+
+    config.close()
+    config=open(cur_path+"\config.txt","w")
+    config.write(configNeu)
+    config.close()
+    tableErinnerung.delete(0,"end")
+    countErinnerung=len(zeileArr)
+    i=1
+    while i<countErinnerung:
+        tableErinnerung.insert(i,zeileArr[i].split(","))
+        i=i+1
+
+
 def weckerMenu():
     import tkinter as tk
     from tkinter import ttk
@@ -843,46 +1274,85 @@ def weckerMenu():
     weckerFenster=tk.Tk()
     weckerFenster.title("Weckermenü")
     weckerFenster.geometry("+%d+%d"%(100,100))
-    weckerFenster.geometry("500x250")
+    weckerFenster.geometry("550x250")
     weckerFenster.attributes("-topmost",1)
+
+    tabControl = ttk.Notebook(weckerFenster)
+
+    weckerTab = ttk.Frame(tabControl)
+    erinnerungsTab = ttk.Frame(tabControl)
+
+    tabControl.add(weckerTab, text ='Termine')
+    tabControl.add(erinnerungsTab, text ='Erinnerungen')
+    tabControl.pack(expand = 1, fill ="both")
+
 
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     for zeile in config:
         if (zeile[0:5]=="alarm"):
             wecker=zeile.split(";")
-            countAlarm=len(wecker)
-            i=1
+        elif(zeile[0:10]=="erinnerung"):
+            erinnerung=zeile.split(";")
+    config.close()
 
-
-    label1=tk.Label(weckerFenster,text="vorhandene Wecker:",font=("times",10))
+    #####--------------TAB Wecker----------------------------###########
+    label1=ttk.Label(weckerTab,text="vorhandene Wecker:",font=("times",10))
     label1.grid(row=0,column=0, sticky="W")
 
-    buttonBearbeiten=tk.Button(weckerFenster,text="Ändern",width=10,height=1, command=lambda:changeWecker(tableWecker))
+    buttonBearbeiten=tk.Button(weckerTab,text="Ändern",width=10,height=1, command=lambda:changeWecker(tableWecker))
     buttonBearbeiten.grid(row=2,column=2, sticky="W")
 
-    buttonLoeschen=tk.Button(weckerFenster,text="Löschen",width=10,height=1,command=lambda:deleteWecker(tableWecker))
+    buttonLoeschen=tk.Button(weckerTab,text="Löschen",width=10,height=1,command=lambda:deleteWecker(tableWecker))
     buttonLoeschen.grid(row=3,column=2, sticky="W")
 
-    separator=ttk.Separator(weckerFenster, orient="horizontal")
-    separator.grid(row=4,column=2, sticky="W")
-
-    buttonHinzufuegen=tk.Button(weckerFenster,text="Neuen Wecker hinzufügen",width=20,height=1,command=lambda:addWecker(tableWecker))
+    buttonHinzufuegen=tk.Button(weckerTab,text="Neuer Wecker",width=12,height=1,command=lambda:addWecker(tableWecker))
     buttonHinzufuegen.grid(row=5,column=2, columnspan=2, sticky="W")
 
-    buttonOK=tk.Button(weckerFenster,text="OK",width=10,height=1,command=lambda:close(weckerFenster))
+    buttonOK=tk.Button(weckerTab,text="OK",width=10,height=1,command=lambda:close(weckerFenster))
     buttonOK.grid(row=7,column=2, sticky="W")
 
-    tableWecker=MultiListbox(weckerFenster,(("Wecker",10),("Nächstes Datum",10),("Nächste Uhrzeit",10),("Serie",10)))
+    tableWecker=MultiListbox(weckerTab,(("Nächstes Datum",10),("Nächste Uhrzeit",10),("Name",15),("Serie",15)))
     tableWecker.grid(row=2, rowspan=6, column=0, sticky="W")
+
+    countAlarm=len(wecker)
+    i=1
     while i<countAlarm:
         columns=wecker[i].split(",")
         ergebnis=ZeitraumBerechnen(columns[3])
-        serie=str(ergebnis[0])+" "+str(ergebnis[1])
+        if(ergebnis[0]==0):
+            serie="0"
+        else:
+            serie=str(ergebnis[0])+" "+str(ergebnis[1])
         tableWecker.insert(tk.END, (columns[0] , columns[1],columns[2],serie))
         i=i+1
 
-    config.close()
+    #####--------------TAB Erinnerungen----------------------------###########
+    label1E=ttk.Label(erinnerungsTab,text="vorhandene Erinnerungen:",font=("times",10))
+    label1E.grid(row=0,column=0, sticky="W")
+
+    buttonBearbeitenE=tk.Button(erinnerungsTab,text="Ändern",width=10,height=1, command=lambda:changeErinnerung(tableErinnerung))
+    buttonBearbeitenE.grid(row=2,column=2, sticky="W")
+
+    buttonLoeschenE=tk.Button(erinnerungsTab,text="Löschen",width=10,height=1,command=lambda:deleteErinnerung(tableErinnerung))
+    buttonLoeschenE.grid(row=3,column=2, sticky="W")
+
+    buttonHinzufuegenE=tk.Button(erinnerungsTab,text="Neue Erinnerung",width=12,height=1,command=lambda:addErinnerung(tableErinnerung))
+    buttonHinzufuegenE.grid(row=5,column=2, columnspan=2, sticky="W")
+
+    buttonOKE=tk.Button(erinnerungsTab,text="OK",width=10,height=1,command=lambda:close(weckerFenster))
+    buttonOKE.grid(row=7,column=2, sticky="W")
+
+    tableErinnerung=MultiListbox(erinnerungsTab,(("Erinnerung",20),("Symbol",10),("alle X min",10),("aktiv?",10),("Countdown?",10)))
+    tableErinnerung.grid(row=2, rowspan=6, column=0, sticky="W")
+
+    countErinnerung=len(erinnerung)
+    i=1
+    while i<countErinnerung:
+        columns=erinnerung[i].split(",")
+        tableErinnerung.insert(tk.END, (columns[0] ,columns[1],columns[2],columns[3],columns[4]))
+        i=i+1
+
 
 
 
@@ -958,6 +1428,45 @@ def addAlarm(addAlarmButton,labelNextAlarm,alarmButton,inputTimeNextAlarm,inputN
     inputNextAlarm.grid_forget()
     addAlarmButton.grid_forget()
 
+def deleteAlarms():
+    import os
+    import time as tm
+
+    curDateTime=tm.strftime("%d.%m.%Y %H:%M",tm.localtime())
+    curDateTime=tm.strptime(curDateTime,"%d.%m.%Y %H:%M")
+    curDateTimeSec=tm.mktime(curDateTime)
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    change=0
+    alarmNeu="alarm"
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            zeile=zeile.replace("\n","")
+            alarms=zeile.split(";")
+            i=1
+            numberAlarms=len(alarms)
+            while i<numberAlarms:
+                alarm=alarms[i].split(",")
+                alarmDateTime=tm.strptime(alarm[0]+" "+alarm[1],"%d.%m.%Y %H:%M")
+                alarmDateTimeSec=tm.mktime(alarmDateTime)
+                zeitdiff=int((alarmDateTimeSec-curDateTimeSec)/60)
+                if zeitdiff<1:
+                    change=1
+                else:
+                    separator=","
+                    alarmNeu=alarmNeu+";"+separator.join(alarm)
+                i=i+1
+            neueZeile=alarmNeu+"\n"
+        else:
+            neueZeile=zeile
+
+        configNeu=configNeu+neueZeile
+    if change==1:
+        config=open(cur_path+"\config.txt","w")
+        config.write(configNeu)
+        config.close()
+
 def getNextAlarm():
     #!/usr/bin/env python
     # -*- coding: utf-8 -*-
@@ -966,32 +1475,33 @@ def getNextAlarm():
 
     curDateTime=tm.strftime("%d.%m.%Y %H:%M",tm.localtime())
     curDateTime=tm.strptime(curDateTime,"%d.%m.%Y %H:%M")
+    curDateTimeSec=tm.mktime(curDateTime)
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
-    change=0
     nextAlarm=""
     nextAlarmName=""
     for zeile in config:
         if (zeile[0:5]=="alarm"):
+
             alarms=zeile.split(";")
             i=1
             date=[]
             time=[]
             name=[]
-            nextAlarm=tm.strptime("01.01.2200 09:00","%d.%m.%Y %H:%M")
-            while i<len(alarms):
+            nextAlarm=999999999999
+            numberAlarms=len(alarms)
+            while i<numberAlarms:
                 alarm=alarms[i].split(",")
                 date.append(alarm[0])
                 time.append(alarm[1])
                 name.append(alarm[2])
                 alarmDateTime=tm.strptime(alarm[0]+" "+alarm[1],"%d.%m.%Y %H:%M")
+                alarmDateTimeSec=tm.mktime(alarmDateTime)
+                zeitdiff=int((alarmDateTimeSec-curDateTimeSec)/60)
 
-                if alarmDateTime<curDateTime:
-                    alarms.pop(i)
-                    change=1
-                elif alarmDateTime<nextAlarm:
-                    nextAlarm=alarmDateTime
+                if alarmDateTimeSec<nextAlarm:
+                    nextAlarm=alarmDateTimeSec
                     nextAlarmName=str(alarm[2])
                 i=i+1
             separator=";"
@@ -1002,9 +1512,7 @@ def getNextAlarm():
         configNeu=configNeu+zeileNeu
 
     config.close()
-    if change==1:
-        config=open(cur_path+"\config.txt","w")
-        config.write(configNeu)
-        config.close()
+
     nextAlarmArr=[nextAlarm,nextAlarmName]
+
     return nextAlarmArr
