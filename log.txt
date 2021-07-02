@@ -1,1 +1,0 @@
-logIn;2021-06-27;11:00:00;projekt1logOut;2021-06-27;11:30:00;projekt1

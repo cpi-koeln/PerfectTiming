@@ -26,14 +26,15 @@ inputTimeNextAlarm=tk.Entry(pT,width=3)
 labelNextAlarm=tk.Label(pT,text="min bis ", bg="gray", font=("times",10))
 inputNextAlarm=tk.Entry(pT)
 
-addErinnerungen()
+
+
+erinnerungen=addErinnerungentoWecker()
 nextAlarmArr=getNextAlarm()
 
-nextAlarm=nextAlarmArr[0]
 
 nextAlarmName=nextAlarmArr[1]
 curSeconds=time.mktime(time.localtime())
-nextAlarmSeconds=time.mktime(nextAlarm)
+nextAlarmSeconds=nextAlarmArr[0]
 
 timerNextAlarm=int((nextAlarmSeconds-curSeconds)/60)+1 #+1 weil direkt im Anschluss Timer ausgeführt wird, wo die variabele um 1 reduziert wird
 
@@ -89,5 +90,5 @@ taskMenu.grid(row=8,rowspan=4,column=34 ,columnspan=23, sticky="NW")
 alarmButton=tk.Button(pT, text="Neuen Alarm hinzufügen", command=lambda:newAlarm(labelActiveAlarm,addAlarmButton,inputTimeNextAlarm,labelNextAlarm,inputNextAlarm,alarmButton))
 alarmButton.grid(row=13,rowspan=4,column=0,  columnspan=23,sticky="NW")
 
-timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime)
+timer(erinnerungen,nextAlarmArr,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime)
 pT.mainloop()

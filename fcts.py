@@ -18,29 +18,31 @@ def closeAlarm(alarmWindow,labelActiveAlarm):
 
 
 
-def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime):
+def timer(erinnerungen,nextAlarmArr,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime):
     import time
     import os
     import tkinter as tk
     import beepy as beep
 
+    deleteAlarms()
+    alarmAusgeloest=0
+    nextAlarmName=nextAlarmArr[1]
+    nextAlarmSec=nextAlarmArr[0]
     zeit=time.strftime("%H:%M",time.localtime())
     if(zeit=="00:00"):
             labelWorkTime.config(text="0h 0min")
     labelTime.config(text=zeit)
+
     #aktivenAlarm runterzählen
-    textActiveAlarm=labelActiveAlarm["text"]
-    textActiveAlarmArr=textActiveAlarm.split(" ")
-    timerNextAlarm=textActiveAlarmArr[1]
-    timerNextAlarm=int(timerNextAlarm.replace("min",""))
+    curDateTime=time.strftime("%d.%m.%Y %H:%M",time.localtime())
+    curDateTime=time.strptime(curDateTime,"%d.%m.%Y %H:%M")
+    curDateTimeSec=time.mktime(curDateTime)
+    zeitdiff0=int((nextAlarmSec-curDateTimeSec)/60)
+    if (zeitdiff0>=1):
 
-
-    if timerNextAlarm>1:
-        text=labelActiveAlarm["text"]
-        text=text.replace(str(timerNextAlarm),str(timerNextAlarm-1))
+        text="noch "+ str(zeitdiff0)+" min bis "+str(nextAlarmName)
         labelActiveAlarm["text"]=text
-        timerNextAlarm=timerNextAlarm-1
-    else:
+    elif(zeitdiff0<-15):
         alarmWindow=tk.Tk()
         alarmWindow.attributes("-topmost",1)
         alarmWindow.geometry("+%d+%d"%(500,500))
@@ -50,16 +52,80 @@ def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, label
         OkButton=tk.Button(alarmWindow,text="Ok",command=lambda:closeAlarm(alarmWindow,labelActiveAlarm))
         OkButton.grid(row=2, column=0)
         beep.beep(4)
+        alarmAusgeloest=1
+
+
+
+    # Erinnerungen aktualisieren
+    newWecker=[]
+
+    for erinnerung in erinnerungen:
+        if (erinnerung[3]=="ja"):
+            if (erinnerung[5]=="neu"):
+                erinnerung[5]=curDateTimeSec+int(erinnerung[2])*60
+            if (erinnerung[4]=="ja"):
+                zeitdiff1=int((int(erinnerung[5])-curDateTimeSec)/60)
+                if (zeitdiff1<1 and zeitdiff1>-2):
+                    cur_path = os.path.dirname(__file__)
+                    config=open(cur_path+"\config.txt","r")
+                    configNeu=""
+                    for zeile in config:
+                        zeile=zeile.replace("\n","")
+                        if(zeile[0:5]=="alarm"):
+                            alarms=zeile
+                        else:
+                            configNeu=configNeu+zeile+"\n"
+                    config.close()
+
+                    newDateTimeSec=curDateTimeSec+int(erinnerung[2])*60
+                    newDateTime=time.localtime(newDateTimeSec)
+                    newDate=time.strftime("%d.%m.%Y",newDateTime)
+                    newTime=time.strftime("%H:%M",newDateTime)
+                    wecker=[str(newDate),str(newTime),erinnerung[0],"0"]
+                    separator=","
+                    newWecker.append(separator.join(wecker))
+            else:
+                zeitdiff2=int((int(erinnerung[5])-curDateTimeSec)/60)
+                #print(zeitdiff2)
+                if (zeitdiff2<1 and zeitdiff2>-2):
+                    erinnerung[5]=curDateTimeSec+int(erinnerung[2])*60
+                    erinnerungWindow=tk.Tk()
+                    erinnerungWindow.attributes("-topmost",1)
+                    erinnerungWindow.geometry("+%d+%d"%(500,500))
+                    erinnerungWindow.configure(bg="gray")
+                    erinnerungLabel=tk.Label(erinnerungWindow,text=str(erinnerung[0]),font=("times",16))
+                    erinnerungLabel.grid(row=0, column=0)
+                    OkButtonE=tk.Button(erinnerungWindow,text="Ok",command=lambda:close(erinnerungWindow))
+                    OkButtonE.grid(row=2, column=0)
+                    beep.beep(4)
+
+    if len(newWecker)>0:
+        #print(newWecker)
+        separator=";"
+        newErinnerungenString=separator.join(newWecker)
+        alarmsNeu=alarms+";"+newErinnerungenString
+        alarmsNeu=alarmsNeu+"\n"
+        configNeu=configNeu+alarmsNeu
+        config=open(cur_path+"\config.txt","w")
+        config.write(configNeu)
+        config.close()
+
+
+
+    if (alarmAusgeloest==1):
+        deleteAlarms()
         nextAlarmArr=getNextAlarm()
         nextAlarm=nextAlarmArr[0]
+
         nextAlarmName=nextAlarmArr[1]
-        curSeconds=time.mktime(time.localtime())
-        nextAlarmSeconds=time.mktime(nextAlarm)
-        timerNextAlarm=int((nextAlarmSeconds-curSeconds)/60)+1 #+1 weil direkt im Anschluss Timer ausgeführt wird, wo die variabele um 1 reduziert wird
-        labelActiveAlarm["text"]="Noch "+str(timerNextAlarm)+"min bis "+nextAlarmName
+
+        timerText=int((nextAlarm-curDateTimeSec)/60)
+
+        text="noch "+ str(timerText)+" min bis "+str(nextAlarmName)
+        labelActiveAlarm["text"]=text
 
 
-    labelTime.after(60000,lambda:timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime, logButton,breakButton,taskMenu,labelTime)) # müsste auf 60000 gesetzt werden
+    labelTime.after(60000,lambda:timer(erinnerungen,nextAlarmArr,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, labelTaskTime,logButton,breakButton,taskMenu,labelTime)) # müsste auf 60000 gesetzt werden
     state=logButton["text"]
     if(state=="Ausloggen"):
         workTimerString=labelWorkTime["text"]
@@ -90,6 +156,7 @@ def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, label
             breakButton["text"]="Kurzpause"
             log(logButton,taskMenu,labelTime,labelWorkTime, labelTaskTime,breakButton)
 
+"""
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
@@ -109,7 +176,7 @@ def timer(nextAlarmName,labelActiveAlarm,inputTimeNextAlarm,labelWorkTime, label
     config=open(cur_path+"\config.txt","w")
     config.write(configNeu)
     config.close()
-
+"""
 
 
 
@@ -441,13 +508,13 @@ def addStempel(stempelFenster,dateLogIn,dateLogOut,timeLogIn,timeLogOut,taskLogI
         logDate=str(dateLogIn.get_date())
         logTime=str(timeLogIn.get())+":00"
         task=taskLogIn["text"]
-        log.write("logIn;"+logDate+";"+logTime+";"+task)
+        log.write("logIn;"+logDate+";"+logTime+";"+task+"\n")
 
     if(timeLogOut.get()!="hh:mm"):
         logDate=str(dateLogOut.get_date())
         logTime=str(timeLogOut.get())+":00"
         task=taskLogOut["text"]
-        log.write("logOut;"+logDate+";"+logTime+";"+task)
+        log.write("logOut;"+logDate+";"+logTime+";"+task+"\n")
     stempelFenster.destroy()
     log.close()
 
@@ -506,8 +573,7 @@ def menuClick(pT):
 
 
 
-def addErinnerungen(): # Startet zu Beginndes Programms und schiebt aktive Erinnerungen mit Countdownfunktion in Weckerliste
-    print("addErinnerungen")
+def addErinnerungentoWecker(): # Startet zu Beginndes Programms und schiebt aktive Erinnerungen mit Countdownfunktion in Weckerliste
     import os
     import time as tm
 
@@ -520,6 +586,7 @@ def addErinnerungen(): # Startet zu Beginndes Programms und schiebt aktive Erinn
     newWecker=[]
     newErinnerungen=[]
     for zeile in config:
+        zeile=zeile.replace("\n","")
         if (zeile[0:10]=="erinnerung"):
             erinnerungen=zeile.split(";")
             countErinnerungen=len(erinnerungen)
@@ -528,34 +595,45 @@ def addErinnerungen(): # Startet zu Beginndes Programms und schiebt aktive Erinn
                 erinnerung=erinnerungen[i].split(",")
                 if (erinnerung[3]=="ja"):
                     if (erinnerung[4]=="ja"):
-                        newDateTimeSec=tm.mkTime(curDateTime)
-                        newDateTimeSec=newDateTime+120*60
+                        newDateTimeSec=tm.mktime(curDateTime)
+                        newDateTimeSec=newDateTimeSec+int(erinnerung[2])*60
                         newDateTime=tm.localtime(newDateTimeSec)
-                        newDate=tm.strptime(newDateTime,"%d.%m.%Y")
-                        newTime=tm.strptime(newDateTime,"%H:%M")
-                        wecker=[str(newDate),str(newTime),erinnerung[0],""]
+                        newDate=tm.strftime("%d.%m.%Y",newDateTime)
+                        newTime=tm.strftime("%H:%M",newDateTime)
+                        wecker=[str(newDate),str(newTime),erinnerung[0],"0","erinnerung"] # letzter Eintrag um zu zeigen, dass es nach dem Shcließen bzw zum Neustart gelöscht werden kann.
                         separator=","
                         newWecker.append(separator.join(wecker))
-
+                    erinnerung.append("neu")# zum Runterzählen in Timer wird die Dauer nochmal abgespeichert
                     newErinnerungen.append(erinnerung)
                 i=i+1
+            configNeu=configNeu+zeile+"\n"
         elif(zeile[0:5]=="alarm"):
-            alarms=zeile
+            alarms=zeile.split(";")
+            countAlarms=len(alarms)
+            i=1
+            newAlarms=[]
+            while i<countAlarms:
+                alarm=alarms[i].split(",")
+                if (alarm[4]!="erinnerung"):
+                    newAlarms.append(alarms[i])
+                i=i+1
+            separator=";"
+            alarms=separator.join(newAlarms)
         else:
-
-        print("config wecker aktualisieren")
-        config=open(cur_path+"\config.txt","r")
-        configNeu=""
-        newWecker=[]
-        newErinnerungen=[]
-        for zeile in config:
-            if (zeile[0:10]=="erinnerung"):
-                erinnerungen=zeile.split(";")
-
-
+            configNeu=configNeu+zeile+"\n"
     config.close()
-
-
+    separator=";"
+    newErinnerungenString=separator.join(newWecker)
+    if (alarms!=""):
+        alarms=alarms+";"
+    if(newErinnerungenString!=""):
+        alarmsNeu="alarm;"+alarms+newErinnerungenString
+        alarmsNeu=alarmsNeu+"\n"
+        configNeu=configNeu+alarmsNeu
+        config=open(cur_path+"\config.txt","w")
+        config.write(configNeu)
+        config.close()
+    return newErinnerungen
 
 ########--------Funktionen zuer Weckerbearbeitung------------------
 
@@ -587,7 +665,7 @@ def changedWecker(tableWecker,changeWecker,inputName,serie,datum,inputZeitraum,t
     else:
         serie=0
 
-    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie)]
+    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie),"wecker"]
     separator=","
     newAlarmString=separator.join(newAlarm)
 
@@ -601,7 +679,8 @@ def changedWecker(tableWecker,changeWecker,inputName,serie,datum,inputZeitraum,t
     for zeile in config:
         if (zeile[0:5]=="alarm"):
             wecker=zeile.split(";")
-            index=wecker.index(active)
+            print("active")
+            index=wecker.index(active+",wecker")
             wecker[index]=newAlarmString
             separator=";"
             zeileNeu=separator.join(wecker)
@@ -744,7 +823,7 @@ def saveWecker(tableWecker,newWecker,inputName,serie,datum,inputZeitraum,timeMen
     else:
         serie=0
 
-    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie)]
+    newAlarm=[str(alarmDatum),str(alarmZeit),str(alarmName),str(serie),"wecker"]
     separator=","
     newAlarmString=separator.join(newAlarm)
     cur_path = os.path.dirname(__file__)
@@ -863,8 +942,23 @@ def addWecker(tableWecker):
 def deleteWecker(tableWecker):
     import os
     active=tableWecker.get(tableWecker.curselection())
+    if (active[3]!="0"):
+        serie=active[3].split(" ")
+        zeit=int(serie[0])
+        einheit=serie[1].replace(" ","")
+        if (einheit=="Minute(n)"):
+            faktor=1
+        elif(einheit=="Stunde(n)"):
+            faktor=60
+        elif(einheit=="Tag(e)"):
+            faktor=60*24
+        elif(einheit=="Woche(n)"):
+            faktor=60*24*7
+        minuten=zeit*faktor
+        active[3]=str(minuten)
+
     separator=","
-    active=separator.join(active)
+    active=separator.join(active)+",wecker"
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
@@ -1193,8 +1287,6 @@ def weckerMenu():
     tabControl.pack(expand = 1, fill ="both")
 
 
-
-
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     for zeile in config:
@@ -1228,7 +1320,10 @@ def weckerMenu():
     while i<countAlarm:
         columns=wecker[i].split(",")
         ergebnis=ZeitraumBerechnen(columns[3])
-        serie=str(ergebnis[0])+" "+str(ergebnis[1])
+        if(ergebnis[0]==0):
+            serie="0"
+        else:
+            serie=str(ergebnis[0])+" "+str(ergebnis[1])
         tableWecker.insert(tk.END, (columns[0] , columns[1],columns[2],serie))
         i=i+1
 
@@ -1333,6 +1428,45 @@ def addAlarm(addAlarmButton,labelNextAlarm,alarmButton,inputTimeNextAlarm,inputN
     inputNextAlarm.grid_forget()
     addAlarmButton.grid_forget()
 
+def deleteAlarms():
+    import os
+    import time as tm
+
+    curDateTime=tm.strftime("%d.%m.%Y %H:%M",tm.localtime())
+    curDateTime=tm.strptime(curDateTime,"%d.%m.%Y %H:%M")
+    curDateTimeSec=tm.mktime(curDateTime)
+    cur_path = os.path.dirname(__file__)
+    config=open(cur_path+"\config.txt","r")
+    configNeu=""
+    change=0
+    alarmNeu="alarm"
+    for zeile in config:
+        if (zeile[0:5]=="alarm"):
+            zeile=zeile.replace("\n","")
+            alarms=zeile.split(";")
+            i=1
+            numberAlarms=len(alarms)
+            while i<numberAlarms:
+                alarm=alarms[i].split(",")
+                alarmDateTime=tm.strptime(alarm[0]+" "+alarm[1],"%d.%m.%Y %H:%M")
+                alarmDateTimeSec=tm.mktime(alarmDateTime)
+                zeitdiff=int((alarmDateTimeSec-curDateTimeSec)/60)
+                if zeitdiff<1:
+                    change=1
+                else:
+                    separator=","
+                    alarmNeu=alarmNeu+";"+separator.join(alarm)
+                i=i+1
+            neueZeile=alarmNeu+"\n"
+        else:
+            neueZeile=zeile
+
+        configNeu=configNeu+neueZeile
+    if change==1:
+        config=open(cur_path+"\config.txt","w")
+        config.write(configNeu)
+        config.close()
+
 def getNextAlarm():
     #!/usr/bin/env python
     # -*- coding: utf-8 -*-
@@ -1341,32 +1475,33 @@ def getNextAlarm():
 
     curDateTime=tm.strftime("%d.%m.%Y %H:%M",tm.localtime())
     curDateTime=tm.strptime(curDateTime,"%d.%m.%Y %H:%M")
+    curDateTimeSec=tm.mktime(curDateTime)
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
-    change=0
     nextAlarm=""
     nextAlarmName=""
     for zeile in config:
         if (zeile[0:5]=="alarm"):
+
             alarms=zeile.split(";")
             i=1
             date=[]
             time=[]
             name=[]
-            nextAlarm=tm.strptime("01.01.2200 09:00","%d.%m.%Y %H:%M")
-            while i<len(alarms):
+            nextAlarm=999999999999
+            numberAlarms=len(alarms)
+            while i<numberAlarms:
                 alarm=alarms[i].split(",")
                 date.append(alarm[0])
                 time.append(alarm[1])
                 name.append(alarm[2])
                 alarmDateTime=tm.strptime(alarm[0]+" "+alarm[1],"%d.%m.%Y %H:%M")
+                alarmDateTimeSec=tm.mktime(alarmDateTime)
+                zeitdiff=int((alarmDateTimeSec-curDateTimeSec)/60)
 
-                if alarmDateTime<curDateTime:
-                    alarms.pop(i)
-                    change=1
-                elif alarmDateTime<nextAlarm:
-                    nextAlarm=alarmDateTime
+                if alarmDateTimeSec<nextAlarm:
+                    nextAlarm=alarmDateTimeSec
                     nextAlarmName=str(alarm[2])
                 i=i+1
             separator=";"
@@ -1377,9 +1512,7 @@ def getNextAlarm():
         configNeu=configNeu+zeileNeu
 
     config.close()
-    if change==1:
-        config=open(cur_path+"\config.txt","w")
-        config.write(configNeu)
-        config.close()
+
     nextAlarmArr=[nextAlarm,nextAlarmName]
+
     return nextAlarmArr
