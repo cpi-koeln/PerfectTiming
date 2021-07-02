@@ -1407,7 +1407,7 @@ def addAlarm(addAlarmButton,labelNextAlarm,alarmButton,inputTimeNextAlarm,inputN
     for zeile in config:
         if (zeile[0:5]=="alarm"):
             zeile=zeile.replace("\n","")
-            zeileNeu=zeile+";"+dateAlarm+","+timeAlarm+","+nameAlarm+","+"0\n"
+            zeileNeu=zeile+";"+dateAlarm+","+timeAlarm+","+nameAlarm+","+"0,wecker\n"
         else:
             zeileNeu=zeile
         configNeu=configNeu+zeileNeu
@@ -1416,10 +1416,9 @@ def addAlarm(addAlarmButton,labelNextAlarm,alarmButton,inputTimeNextAlarm,inputN
     config.write(configNeu)
     config.close()
     nextAlarmArr=getNextAlarm()
-    nextAlarm=nextAlarmArr[0]
     nextAlarmName=nextAlarmArr[1]
     curSeconds=time.mktime(time.localtime())
-    nextAlarmSeconds=time.mktime(nextAlarm)
+    nextAlarmSeconds=nextAlarmArr[0]
     timerNextAlarm=int((nextAlarmSeconds-curSeconds)/60)+1 #+1 weil direkt im Anschluss Timer ausgeführt wird, wo die variabele um 1 reduziert wird
     labelActiveAlarm["text"]="Noch "+str(timerNextAlarm)+"min bis "+nextAlarmName
     alarmButton.grid(row=13,rowspan=4,column=0,  columnspan=23,sticky="NW")
