@@ -1,3 +1,3 @@
-projekte;projekt1;projekt2
-erinnerungen;erinnerung1,,15,ja,ja;erinnerung2,,30,nein,ja
-alarm;26.07.2021,07:55,erinnerung1,0,erinnerung
+projekte;projekt1;projekt2;test25
+erinnerungen;Arbeitest du noch am Projekt?,,15,ja,nein;Zeit für eine Pause,,60,ja,nein;Beweg dich!,,55,ja,nein;Trink etwas!,,30,ja,nein
+alarm

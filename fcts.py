@@ -286,7 +286,7 @@ def chooseProjekt(passarg,*args):
     buttonBearbeiten["state"]=tk.NORMAL
     buttonLoeschen["state"]=tk.NORMAL
 
-def deleteProjekt(listProjekte):
+def deleteProjekt(listProjekte,pT):
     import os
     active=listProjekte.get(listProjekte.curselection())
     cur_path = os.path.dirname(__file__)
@@ -314,8 +314,9 @@ def deleteProjekt(listProjekte):
     while i<countProjekte:
         listProjekte.insert(i,zeileArr[i])
         i=i+1
+    refreshProjekte(pT,zeileArr)
 
-def changedProjekt(listProjekte,active,newProjektName,changeWecker):
+def changedProjekt(listProjekte,active,newProjektName,changeWecker,pT):
     import os
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
@@ -343,29 +344,46 @@ def changedProjekt(listProjekte,active,newProjektName,changeWecker):
         listProjekte.insert(i,zeileArr[i])
         i=i+1
     changeWecker.destroy()
+    refreshProjekte(pT,zeileArr)
+
+def refreshProjekte(pT,projekte):
+    import tkinter as tk
+    projekte.remove("projekte")
+    print(projekte)
+    pT.taskMenu.forget()
+    task=tk.StringVar(pT.parent)
+    task.set(projekte[0])
+    pT.taskMenu=tk.OptionMenu(pT.parent,task, *projekte)
+    passarg=[pT.logButton,pT.labelTime,pT.breakButton,pT.labelTaskTime,task,pT.taskMenu]
+    task.trace("w",lambda *args, passed=passarg:changeTask(passed,*args)) # Ruft die Funktion changeTask auf, wenn die varieable Task geändert wird (w=wirte)
+    pT.taskMenu.configure(height=1);
+    pT.taskMenu.configure(width=14);
+    pT.taskMenu.configure(anchor="w")
+    pT.taskMenu.grid(row=8,rowspan=4,column=34 ,columnspan=23, sticky="NW")
+    pT.task=task
 
 
-def changeProjekt(listProjekte):
+def changeProjekt(listProjekte,pT):
     import tkinter as tk
     active=listProjekte.get(listProjekte.curselection())
 
-    changeWecker=tk.Tk()
-    changeWecker.title("Neuer Projektname")
-    changeWecker.geometry("+%d+%d"%(75,250))
-    changeWecker.geometry("250x75")
-    changeWecker.attributes("-topmost",1)
+    changeProjekt=tk.Tk()
+    changeProjekt.title("Neuer Projektname")
+    changeProjekt.geometry("+%d+%d"%(75,250))
+    changeProjekt.geometry("250x75")
+    changeProjekt.attributes("-topmost",1)
 
-    label1=tk.Label(changeWecker,text="Bitte gebe den neuen Projektnamen an:",font=("times",10))
+    label1=tk.Label(changeProjekt,text="Bitte gebe den neuen Projektnamen an:",font=("times",10))
     label1.grid(row=0,column=0,columnspan=2, sticky="W")
 
-    input=tk.Entry(changeWecker)
+    input=tk.Entry(changeProjekt)
     input.insert(10,"")
     input.grid(row=1,column=0, sticky="W")
 
-    buttonOK2=tk.Button(changeWecker,text="OK",height=1,width=10, command=lambda:changedProjekt(listProjekte,active,input,changeWecker))
+    buttonOK2=tk.Button(changeProjekt,text="OK",height=1,width=10, command=lambda:changedProjekt(listProjekte,active,input,changeProjekt,pT))
     buttonOK2.grid(row=1,column=1, sticky="W")
 
-def addProjekt(listProjekte,inputNeu):
+def addProjekt(listProjekte,inputNeu,pT):
     import os
     newName=inputNeu.get()
     cur_path = os.path.dirname(__file__)
@@ -394,8 +412,9 @@ def addProjekt(listProjekte,inputNeu):
     while i<countProjekte:
         listProjekte.insert(i,zeileArr[i])
         i=i+1
+    refreshProjekte(pT,zeileArr)
 
-def projekte():
+def projekte(pT):
     import tkinter as tk
     from tkinter import ttk
     import os
@@ -410,10 +429,10 @@ def projekte():
     label1=tk.Label(projektFenster,text="vorhandene Projekte:",font=("times",10))
     label1.grid(row=0,column=0, sticky="W")
 
-    buttonBearbeiten=tk.Button(projektFenster,text="Ändern",width=10,height=1,state=tk.DISABLED, command=lambda:changeProjekt(listProjekte))
+    buttonBearbeiten=tk.Button(projektFenster,text="Ändern",width=10,height=1,state=tk.DISABLED, command=lambda:changeProjekt(listProjekte,pT))
     buttonBearbeiten.grid(row=2,column=2, sticky="W")
 
-    buttonLoeschen=tk.Button(projektFenster,text="Löschen",width=10,height=1,state=tk.DISABLED,command=lambda:deleteProjekt(listProjekte))
+    buttonLoeschen=tk.Button(projektFenster,text="Löschen",width=10,height=1,state=tk.DISABLED,command=lambda:deleteProjekt(listProjekte,pT))
     buttonLoeschen.grid(row=3,column=2, sticky="W")
 
     separator=ttk.Separator(projektFenster, orient="horizontal")
@@ -423,7 +442,7 @@ def projekte():
     inputNeu.insert(10,"Neues Projekt")
     inputNeu.grid(row=5,column=2,columnspan=2, sticky="W")
 
-    buttonHinzufuegen=tk.Button(projektFenster,text="Hinzufügen",width=10,height=1,command=lambda:addProjekt(listProjekte,inputNeu))
+    buttonHinzufuegen=tk.Button(projektFenster,text="Hinzufügen",width=10,height=1,command=lambda:addProjekt(listProjekte,inputNeu,pT))
     buttonHinzufuegen.grid(row=6,column=2, sticky="W")
 
     buttonOK=tk.Button(projektFenster,text="OK",width=10,height=1,command=lambda:close(projektFenster))
@@ -573,7 +592,7 @@ def menuClick(pT):
         #pT.attributes("-topmost",0)
         menu.attributes("-topmost",1)
 
-        projektButton=tk.Button(menu,text="Projekte",width=12,height=1, command=lambda:projekte())
+        projektButton=tk.Button(menu,text="Projekte",width=12,height=1, command=lambda:projekte(pT))
         projektButton.grid(row=1,column=0)
         stempelButton=tk.Button(menu,text="Stempeln",width=12,height=1,command=lambda:stempeln())
         stempelButton.grid(row=2,column=0)
@@ -1201,7 +1220,7 @@ def changeErinnerung(pT,erinnerungsTab,weckerTab):
 
 
 
-def saveErinnerung(tableErinnerung,newErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar):
+def saveErinnerung(erinnerungsTab,newErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar):
     import tkinter as tk
     import os
     import time as tm
@@ -1242,16 +1261,16 @@ def saveErinnerung(tableErinnerung,newErinnerung,inputName, inputSymbol,inputEri
     config=open(cur_path+"\config.txt","w")
     config.write(configNeu)
     config.close()
-    tableErinnerung.delete(0,"end")
+    erinnerungsTab.tableErinnerung.delete(0,"end")
     countErinnerung=len(erinnerung)
     i=1
     while i<countErinnerung:
-        tableErinnerung.insert(i,erinnerung[i].split(","))
+        erinnerungsTab.tableErinnerung.insert(i,erinnerung[i].split(","))
         i=i+1
     newErinnerung.destroy()
 
 
-def addErinnerung(tableErinnerung):
+def addErinnerung(erinnerungsTab):
     import tkinter as tk
     import os
     from tkinter import ttk
@@ -1302,7 +1321,7 @@ def addErinnerung(tableErinnerung):
     checkCountdown=tk.Checkbutton(newErinnerung,variable = checkCountdownVar, onvalue = 1, offvalue = 0)
     checkCountdown.grid(row=4,column=10,rowspan=1,columnspan=1, sticky="W")
 
-    buttonSpeichern=tk.Button(newErinnerung,text="Erinnerung speichern",width=15,height=1, command=lambda:saveErinnerung(tableErinnerung,newErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar))
+    buttonSpeichern=tk.Button(newErinnerung,text="Erinnerung speichern",width=15,height=1, command=lambda:saveErinnerung(erinnerungsTab,newErinnerung,inputName, inputSymbol,inputErinnerung,checkAktivVar,checkCountdownVar))
     buttonSpeichern.grid(row=5,column=16,rowspan=3,columnspan=18,sticky="W")
     #newErinnerung.mainloop()
 
