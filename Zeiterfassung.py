@@ -90,6 +90,7 @@ class mainFrame:
         self.taskMenu.configure(width=14);
         self.taskMenu.configure(anchor="w")
         self.taskMenu.grid(row=8,rowspan=4,column=34 ,columnspan=23, sticky="NW")
+        self.task=task
 
         self.alarmButton=tk.Button(parent, text="Neuen Alarm hinzufügen", command=lambda:newAlarm(self))
         self.alarmButton.grid(row=13,rowspan=4,column=0,  columnspan=23,sticky="NW")
