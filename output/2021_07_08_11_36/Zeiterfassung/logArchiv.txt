@@ -1,0 +1,15 @@
+logOut;28.07.2021;08:13:56;projekt1
+logIn;28.07.2021;08:14:14;projekt1
+logOut;28.07.2021;08:14:15;projekt1
+logIn;28.07.2021;08:14:15;projekt1
+logOut;28.07.2021;08:14:16;projekt1
+logIn;28.07.2021;08:14:18;projekt1
+logOut;28.07.2021;08:15:05;projekt1
+logIn;28.07.2021;11:24:09;projekt1
+logOut;28.07.2021;11:27:26;projekt2
+logIn;28.07.2021;11:30:23;projekt2
+logOut;28.07.2021;11:30:37;projekt1
+logIn;28.07.2021;11:41:29;projekt1
+logOut;28.07.2021;11:41:31;projekt1
+logIn;28.07.2021;11:41:35;projekt1
+logOut;28.07.2021;11:42:05;projekt2

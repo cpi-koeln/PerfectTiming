@@ -1,0 +1,3 @@
+projekte;projekt1;projekt2;Neues Projekt
+erinnerungen;Arbeitest du noch am Projekt?,,15,ja,nein;Zeit für eine Pause,,60,ja,nein;Beweg dich!,,55,ja,nein;Trink etwas!,,30,ja,nein
+alarm
