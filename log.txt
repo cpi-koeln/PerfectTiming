@@ -1,2 +1,4 @@
-logIn;2021-07-16;07:00:00;projekt1
-logOut;2021-07-16;08:00:00;projekt1
+logIn;28.07.2021;13:52:30;projekt1
+logOut;28.07.2021;13:52:32;projekt1
+logIn;28.07.2021;14:19:23;projekt1
+logOut;28.07.2021;14:19:25;projekt1
