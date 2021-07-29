@@ -1,7 +1,8 @@
 # PerfectTiming
 
 Tool to log work times easily and autmatically.
-The .exe-file "Zeiterfassung" can be put in the autostart.
+To use this tool copy the folder of the latest output in your directory.
+The .exe-file "Zeiterfassung"  can be put in the autostart.
 
 Logging:
   After start the user can log-in and log-out for work by pressing the "Einloggen/Ausloggen"-button.
@@ -26,7 +27,7 @@ Alarms/Reminders:
     The user wants to be reminded each day (or only at one day) of an appointment. Thus the user creates an alarm with this date and time. 
     Even if the appointment is in the next week and the programm is restarted several times, it will alarm you.
 
-    Reminder:
+    Reminder :
     The user wants to be reminded to make a short break every hour. Thus the user sets a reminder with 60 minutes.
     Thus, after each 60 minutes the programm will remind the user of making a break.
     If the countdown function of the reminder is active the event will also be shown on the main-window countdown.
