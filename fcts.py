@@ -20,7 +20,7 @@ def closeAlarm(alarmWindow,labelActiveAlarm):
 
 
 
-def timer(pT):
+def timer(pT,nextAlarmArr):
 
     import time
     import os
@@ -28,7 +28,7 @@ def timer(pT):
     import beepy as beep
 
     deleteAlarms()
-    nextAlarmArr=getNextAlarm()
+    #nextAlarmArr=getNextAlarm()
 
     alarmAusgeloest=0
     nextAlarmName=nextAlarmArr[1]
@@ -45,14 +45,15 @@ def timer(pT):
     curDateTime=time.strptime(curDateTime,"%d.%m.%Y %H:%M")
     curDateTimeSec=time.mktime(curDateTime)
     zeitdiff0=int((nextAlarmSec-curDateTimeSec)/60)
+
     if (zeitdiff0>=1 and zeitdiff0<100000):
         text="noch "+ str(zeitdiff0)+" min bis "+str(nextAlarmName)
         pT.labelActiveAlarm["text"]=text
     elif (int(zeitdiff0)>100000):
 
-        text="kein Wecker"
+        text=""
         pT.labelActiveAlarm["text"]=text
-    elif(zeitdiff0<-15):
+    elif(int(zeitdiff0)>-15):
         alarmWindow=tk.Tk()
         alarmWindow.attributes("-topmost",1)
         alarmWindow.geometry("+%d+%d"%(500,500))
@@ -63,8 +64,26 @@ def timer(pT):
         OkButton.grid(row=2, column=0)
         beep.beep(4)
         alarmAusgeloest=1
+        nextAlarmArr=getNextAlarm()
+        nextAlarmSec=nextAlarmArr[0]
+        nextAlarmName=nextAlarmArr[1]
+        zeitdiff0=int((nextAlarmSec-curDateTimeSec)/60)
 
+        if (int(zeitdiff0)>=1 and int(zeitdiff0)<100000):
+            text="noch "+ str(zeitdiff0)+" min bis "+str(nextAlarmName)
+        else:
+            text=""
+    else:
+        nextAlarmArr=getNextAlarm()
+        nextAlarmSec=nextAlarmArr[0]
+        nextAlarmName=nextAlarmArr[1]
+        zeitdiff0=int((nextAlarmSec-curDateTimeSec)/60)
+        if (int(zeitdiff0)>=1 and int(zeitdiff0)<100000):
+            text="noch "+ str(zeitdiff0)+" min bis "+str(nextAlarmName)
+        else:
+            text=""
 
+    pT.labelActiveAlarm["text"]=text
 
     # Erinnerungen aktualisieren
     newWecker=[]
@@ -123,18 +142,17 @@ def timer(pT):
 
 
     if (alarmAusgeloest==1):
-
         nextAlarm=nextAlarmArr[0]
-
         nextAlarmName=nextAlarmArr[1]
-
-        timerText=int((nextAlarm-curDateTimeSec)/60)
-
-        text="noch "+ str(timerText)+" min bis "+str(nextAlarmName)
+        zeitdiff0=int((nextAlarm-curDateTimeSec)/60)
+        if (int(zeitdiff0)>=1 and int(zeitdiff0)<100000):
+            text="noch "+ str(zeitdiff0)+" min bis "+str(nextAlarmName)
+        else:
+            text=""
         pT.labelActiveAlarm["text"]=text
 
 
-    pT.labelTime.after(60000,lambda:timer(pT)) # müsste auf 60000 gesetzt werden
+    pT.labelTime.after(60000,lambda:timer(pT,nextAlarmArr)) # müsste auf 60000 gesetzt werden
     state=pT.logButton["text"]
     if(state=="Ausloggen"):
         workTimerString=pT.labelWorkTime["text"]
@@ -163,7 +181,7 @@ def timer(pT):
             pT.breakButton["text"]="noch "+str(newLeftTime)+"min"
         else:
             pT.breakButton["text"]="Kurzpause"
-            log(pT.logButton,pT.taskMenu,pT.labelTime,pT.labelWorkTime, pT.labelTaskTime,pT.breakButton)
+            log(pT)
 
 
 
@@ -195,76 +213,73 @@ def getErinnerungen():
                 i=i+1
         return newErinnerungen
 
-def log(logButton,taskMenu,labelTime,labelWorkTime, labelTaskTime,breakButton):
+def log(pT):
     import os
     import time
     import tkinter as tk
+
     cur_path = os.path.dirname(__file__)
-    state=logButton["text"]
+    state=pT.logButton["text"]
     log=open(cur_path+"\log.txt","a")
     logArchiv=open(cur_path+"\logArchiv.txt","a")
-    task=taskMenu["text"]
+    task=pT.taskMenu["text"]
     logDate=time.strftime("%d.%m.%Y",time.localtime())
     logTime=time.strftime("%H:%M:%S",time.localtime())
-    if(task=="Aufgabe wählen"):
-        task="default"
     if(state=="Einloggen"):
-        logButton["text"]="Ausloggen"
+        print(logTime)
+
+        pT.logButton["text"]="Ausloggen"
         log.write("logIn;"+logDate+";"+logTime+";"+task+"\n")
         logArchiv.write("logIn;"+logDate+";"+logTime+";"+task+"\n")
-        labelTime.config(fg="green")
-        breakButton["state"]=tk.NORMAL
-        if (breakButton["text"]!="Kurzpause"):
-            breakButton["text"]="Kurzpause"
+        pT.labelTime.config(fg="green")
+        pT.breakButton["state"]=tk.NORMAL
+        if (pT.breakButton["text"]!="Kurzpause"):
+            pT.breakButton["text"]="Kurzpause"
     elif(state=="Ausloggen"):
-        logButton["text"]="Einloggen"
+        pT.logButton["text"]="Einloggen"
         log.write("logOut;"+logDate+";"+logTime+";"+task+"\n")
         logArchiv.write("logOut;"+logDate+";"+logTime+";"+task+"\n")
-        labelTime.config(fg="black")
-        breakButton["state"]=tk.DISABLED
+        pT.labelTime.config(fg="black")
+        pT.breakButton["state"]=tk.DISABLED
         #labelWorkTime.config(text="0h 0min")
         #labelTaskTime.config(text="0h 0min")
     log.close()
     logArchiv.close()
 
-def shortBreak(breakButton, logButton,taskMenu,labelTime):
+def shortBreak(pT):
     import tkinter as tk
     import os
     import time
-    if(breakButton["text"]=="Kurzpause" and logButton["text"]=="Ausloggen"):
-        breakButton["state"]=tk.DISABLED
+    if(pT.breakButton["text"]=="Kurzpause" and pT.logButton["text"]=="Ausloggen"):
+        pT.breakButton["state"]=tk.DISABLED
         cur_path = os.path.dirname(__file__)
         log=open(cur_path+"\log.txt","a")
         logDate=time.strftime("%d.%m.%Y",time.localtime())
         logTime=time.strftime("%H:%M:%S",time.localtime())
-        task=taskMenu["text"]
+        task=pT.taskMenu["text"]
         if(task=="Aufgabe wählen"):
             task="default"
-        breakButton.config(text="noch 5min")
-        logButton["text"]="Einloggen"
+        pT.breakButton.config(text="noch 5min")
+        pT.logButton["text"]="Einloggen"
         log.write("logOut;"+logDate+";"+logTime+";"+task+"\n")
-        labelTime.config(fg="black")
+        pT.labelTime.config(fg="black")
         log.close()
 
 def changeTask(passarg, *args):
     import tkinter as tk
     import os
     import time
-    logButton=passarg[0]
-    labelTime=passarg[1]
-    breakButton=passarg[2]
-    labelTaskTime=passarg[3]
-    task=passarg[4]
-    taskMenu=passarg[5]
+    pT=passarg[0]
+    task=passarg[1]
 
     #taskName=task.get()
-    if (breakButton["state"]==tk.NORMAL and logButton["text"]=="Ausloggen"):
+    if (pT.breakButton["state"]==tk.NORMAL and pT.logButton["text"]=="Ausloggen"):
 
 
         cur_path = os.path.dirname(__file__)
-        state=logButton["text"]
+        state=pT.logButton["text"]
         log=open(cur_path+"\log.txt","a")
-        task=taskMenu["text"]
+        task=pT.taskMenu["text"]
         logDate=time.strftime("%d.%m.%Y",time.localtime())
         logTime=time.strftime("%H:%M:%S",time.localtime())
         if(task=="Aufgabe wählen"):
@@ -272,7 +287,7 @@ def changeTask(passarg, *args):
 
         log.write("logOut;"+logDate+";"+logTime+";"+"oldTask"+"\n")
         log.write("logIn;"+logDate+";"+logTime+";"+task+"\n")
-        labelTaskTime["text"]="0h 00min"
+        pT.labelTaskTime["text"]="0h 00min"
         log.close()
 
 
@@ -585,7 +600,11 @@ def menuClick(pT):
     except:
         menuActive=1
         menu=tk.Tk()
-        menu.geometry("+%d+%d"%(0,20))
+        geometry=pT.parent.winfo_geometry()
+        y=geometry.split("+")
+
+
+        menu.geometry("+%d+%d"%(int(y[1])+9,int(y[2])+54))
         menu.geometry("94x130")
         menu.wm_overrideredirect(1) # hier wird der Windows-Fensterrahmen ausgeschaltet
         menu.resizable(0, 0) #Don't allow resizing in the x or y direction
@@ -1465,24 +1484,27 @@ def weckerMenu(pT):
 
 
 
+def slideWindow(pT):
+    print("slide")
 
 
 
-def hideWindow(pT,hideButton):
-    if (hideButton["text"]=="Hide"):
-        pT.attributes("-topmost",0)
-        hideButton.config(text="Fix")
+def hideWindow(pT):
+    if (pT.hideButton["text"]=="Hide"):
+        pT.parent.attributes("-topmost",0)
+        pT.hideButton.config(image=pT.pin,text="Fix")
     else:
-        pT.attributes("-topmost",1)
-        hideButton.config(text="Hide")
+        pT.parent.attributes("-topmost",1)
+        pT.hideButton.config(image=pT.pinned,text="Hide")
 
-def newAlarm(labelActiveAlarm,addAlarmButton,inputTimeNextAlarm,labelNextAlarm,inputNextAlarm,alarmButton):
-    alarmButton.grid_forget()
+
+def newAlarm(pT):
+    pT.alarmButton.grid_forget()
     #labelActiveAlarm.grid_forget()
-    inputTimeNextAlarm.grid(row=13,rowspan=5, column=0,columnspan=2 ,sticky="NW")
-    labelNextAlarm.grid(row=13,rowspan=5,column=2, columnspan=3,sticky="NW")
-    inputNextAlarm.grid(row=13,rowspan=5, column=6, columnspan=10, sticky="NW")
-    addAlarmButton.grid(row=13, rowspan=5,column=26,columnspan=3,sticky="NW")
+    pT.inputTimeNextAlarm.grid(row=13,rowspan=5, column=0,columnspan=2 ,sticky="NW")
+    pT.labelNextAlarm.grid(row=13,rowspan=5,column=2, columnspan=3,sticky="NW")
+    pT.inputNextAlarm.grid(row=13,rowspan=5, column=6, columnspan=10, sticky="NW")
+    pT.addAlarmButton.grid(row=13, rowspan=5,column=26,columnspan=3,sticky="NW")
 
 def ZeitraumBerechnen(Minuten):
     if (int(Minuten)!=0):
@@ -1503,15 +1525,15 @@ def ZeitraumBerechnen(Minuten):
         ergebnis=[0,""]
     return ergebnis
 
-def addAlarm(addAlarmButton,labelNextAlarm,alarmButton,inputTimeNextAlarm,inputNextAlarm,labelActiveAlarm):
+def addAlarm(pT):
     import time
     import os
     curSeconds=time.mktime(time.localtime())
-    alarmSeconds=curSeconds+60*int(inputTimeNextAlarm.get())
+    alarmSeconds=curSeconds+60*int(pT.inputTimeNextAlarm.get())
     nextAlarm=time.localtime(alarmSeconds)
     dateAlarm=time.strftime("%d.%m.%Y",nextAlarm)
     timeAlarm=time.strftime("%H:%M",nextAlarm)
-    nameAlarm=inputNextAlarm.get()
+    nameAlarm=pT.inputNextAlarm.get()
     cur_path = os.path.dirname(__file__)
     config=open(cur_path+"\config.txt","r")
     configNeu=""
@@ -1531,12 +1553,12 @@ def addAlarm(addAlarmButton,labelNextAlarm,alarmButton,inputTimeNextAlarm,inputN
     curSeconds=time.mktime(time.localtime())
     nextAlarmSeconds=nextAlarmArr[0]
     timerNextAlarm=int((nextAlarmSeconds-curSeconds)/60)+1 #+1 weil direkt im Anschluss Timer ausgeführt wird, wo die variabele um 1 reduziert wird
-    labelActiveAlarm["text"]="Noch "+str(timerNextAlarm)+"min bis "+nextAlarmName
-    alarmButton.grid(row=13,rowspan=4,column=0,  columnspan=23,sticky="NW")
-    inputTimeNextAlarm.grid_forget()
-    labelNextAlarm.grid_forget()
-    inputNextAlarm.grid_forget()
-    addAlarmButton.grid_forget()
+    pT.labelActiveAlarm["text"]="Noch "+str(timerNextAlarm)+"min bis "+nextAlarmName
+    pT.alarmButton.grid(row=13,rowspan=4,column=0,  columnspan=23,sticky="NW")
+    pT.inputTimeNextAlarm.grid_forget()
+    pT.labelNextAlarm.grid_forget()
+    pT.inputNextAlarm.grid_forget()
+    pT.addAlarmButton.grid_forget()
 
 def deleteAlarms():
     import os
@@ -1622,7 +1644,9 @@ def getNextAlarm():
         configNeu=configNeu+zeileNeu
 
     config.close()
-
-    nextAlarmArr=[nextAlarm,nextAlarmName]
+    if len(nextAlarmName)>0:
+        nextAlarmArr=[nextAlarm,nextAlarmName]
+    else:
+        nextAlarmArr=[0,""]
 
     return nextAlarmArr

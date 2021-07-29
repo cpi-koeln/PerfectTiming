@@ -3,6 +3,7 @@ import tkinter as tk
 import time
 from fcts import*
 import os
+from tkinter.ttk import *
 
 
 root=tk.Tk()
@@ -54,10 +55,15 @@ class mainFrame:
         self.addAlarmButton=tk.Button(parent,text="+",command=lambda:addAlarm(self))
 
         #Buttons
-        self.hideButton=tk.Button(parent,text="Hide",command=lambda:hideWindow(self))
+        path = os.path.dirname(__file__)
+        self.pin=tk.PhotoImage(file=path+'/pin.gif')
+        self.pinned=tk.PhotoImage(file=path+'/pinned.gif')
+        self.hideButton=tk.Button(parent,image=self.pinned,text="Hide",command=lambda:hideWindow(self), width="20", height="20")
+        #self.hideButton.config(, width="15", height="15")
         self.hideButton.grid(row=0, rowspan=4,column=50,columnspan=6, sticky="NW")
 
-        self.closeButton=tk.Button(parent,text="X",command=lambda:closeProgramm(root))
+        self.arrow=tk.PhotoImage(file=path+'/arrow.gif')
+        self.closeButton=tk.Button(parent,image=self.arrow,text="X",command=lambda:slideWindow(root),width="20", height="20")
         self.closeButton.grid(row=0, rowspan=4,column=56,columnspan=3, sticky="NW")
 
         menuActive=0
@@ -84,7 +90,7 @@ class mainFrame:
         task=tk.StringVar(parent)
         task.set(taskList[0])
         self.taskMenu=tk.OptionMenu(parent,task, *taskList)
-        passarg=[self.logButton,self.labelTime,self.breakButton,self.labelTaskTime,task,self.taskMenu]
+        passarg=[self,task]
         task.trace("w",lambda *args, passed=passarg:changeTask(passed,*args)) # Ruft die Funktion changeTask auf, wenn die varieable Task geändert wird (w=wirte)
         self.taskMenu.configure(height=1);
         self.taskMenu.configure(width=14);
@@ -96,5 +102,6 @@ class mainFrame:
         self.alarmButton.grid(row=13,rowspan=4,column=0,  columnspan=23,sticky="NW")
 
 pT=mainFrame(root)
-timer(pT)
+nextAlarmArr=getNextAlarm()
+timer(pT,nextAlarmArr)
 root.mainloop()
